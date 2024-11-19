@@ -27,7 +27,7 @@ exports.create = async (req, res) => {
       expenseDate: request.expenseDate,
       status: request.status,
       attachment: filePath,
-      userId: auth_user.id,
+      userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId
     });
     if (expenseRec) {
       data = {
@@ -78,9 +78,11 @@ exports.create = async (req, res) => {
 
 exports.list = async (req, res) => {
   try {
+    const auth_user = verify.verify_token(req.headers.token).details;
     const request = req.query;
     let filter = {};
     filter.isDeleted = false;
+    filter.userId = auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId;
     if (request.status) {
       filter.status = {
         $in: request.status.split(","),
@@ -114,6 +116,7 @@ exports.list = async (req, res) => {
 
 exports.view = async (req, res) => {
   try {
+    const auth_user = verify.verify_token(req.headers.token).details;
     const expenseRec = await expenseModel.findById(req.params.id).lean();
     if (expenseRec) {
       if (
@@ -166,7 +169,6 @@ exports.update = async (req, res) => {
         status: request.status,
         description: request.description,
         attachment: newImage,
-        userId: auth_user.id,
       },
     };
     const dublicaterec = await expenseModel.findOne({
@@ -220,7 +222,8 @@ exports.delete = async (req, res) => {
 
 exports.getExpenseNumber = async (req, res) => {
   try {
-    const purchaseOrderRecords = await expenseModel.find().count();
+    const auth_user = verify.verify_token(req.headers.token).details;
+    const purchaseOrderRecords = await expenseModel.find({ userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId }).count();
     const purchaseOrderNumber = `EXP-${(purchaseOrderRecords + 1)
       .toString()
       .padStart(6, 0)}`;

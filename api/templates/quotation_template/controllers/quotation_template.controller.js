@@ -7,11 +7,11 @@ exports.updateQuotationTemplate = async (req, res) => {
   try {
     const request = req.body;
     const authUser = verify.verify_token(req.headers.token).details;
-    
-    const filter = { userId: authUser.id };
+
+    const filter = { userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId };
     const update = {
       default_quotation_template: request.default_quotation_template,
-      userId: authUser.id,
+      userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId
     };
     const options = { new: true, upsert: true };
 
@@ -31,7 +31,7 @@ exports.viewQuotationTemplate = async (req, res) => {
     const authUser = verify.verify_token(req.headers.token).details;
     const quotationTemplateRecord = await quotationTemplateModel
       .findOne({
-        userId: authUser.id,
+        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId
       })
       .lean();
     if (quotationTemplateRecord == null) {
@@ -40,8 +40,8 @@ exports.viewQuotationTemplate = async (req, res) => {
       };
       response.success_message(obj, res);
     }
-    else{
-        response.success_message(quotationTemplateRecord, res)
+    else {
+      response.success_message(quotationTemplateRecord, res)
     }
   } catch (error) {
     response.error_message(error.message, res);

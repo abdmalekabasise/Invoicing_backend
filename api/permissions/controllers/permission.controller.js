@@ -6,7 +6,7 @@ exports.updatePermission = async (req, res) => {
   try {
     const request = req.body;
     const authUser = verify.verify_token(req.headers.token).details;
-    request.userId = authUser.id;
+    request.userId = authUser.role === "Super Admin" ? authUser.id : authUser.userId;
     const permissionRec = await permissionModel.findByIdAndUpdate(
       req.params.id,
       request
@@ -28,8 +28,11 @@ exports.updatePermission = async (req, res) => {
 exports.viewPermissions = async (req, res) => {
   try {
     //const userId = verify_token(req.headers.token).details.id;
+    const authUser = verify.verify_token(req.headers.token).details;
+
     const roleRec = await permissionModel.findOne({
       roleId: req.params.id,
+      userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId
     });
     response.success_message(roleRec, res);
   } catch (error) {

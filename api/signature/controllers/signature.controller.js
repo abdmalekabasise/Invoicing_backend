@@ -17,6 +17,7 @@ exports.create = async (req, res) => {
       userId: authUser.id,
       markAsDefault: true,
       isDeleted: false,
+      userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId
     });
     let markAsDefault = false;
     if (existingDefaultSignature == null) {
@@ -37,6 +38,7 @@ exports.create = async (req, res) => {
     const duplicateRecord = await signatureModel.findOne({
       signatureName: { $regex: new RegExp(`^${signatureName}$`, "i") },
       isDeleted: false,
+      userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId
     });
     if (duplicateRecord) {
       const data = { message: "Signature name already exists." };
@@ -47,7 +49,7 @@ exports.create = async (req, res) => {
       signatureImage: filePath,
       status: request.status,
       markAsDefault: markAsDefault,
-      userId: authUser.id,
+      userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
       isDeleted: false,
     });
     if (signatureRecord) {
@@ -69,7 +71,7 @@ exports.update = async (req, res) => {
 
     const imageRecord = await signatureModel.findById(req.params.id);
     let newImage = imageRecord.signatureImage;
-    if (req.file) { 
+    if (req.file) {
       newImage = req.file.path;
       if (
         imageRecord.signatureImage !== "" &&
@@ -85,6 +87,7 @@ exports.update = async (req, res) => {
       _id: { $ne: req.params.id },
       signatureName: { $regex: new RegExp(`^${signatureName}$`, "i") },
       isDeleted: false,
+      userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId
     });
     if (duplicateRecord) {
       const data = { message: "Signature name already exists." };
@@ -95,16 +98,17 @@ exports.update = async (req, res) => {
         // userId: authUser.id,
         markAsDefault: true,
         isDeleted: false,
-       // _id: { $ne: req.params.id },
+        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
+        // _id: { $ne: req.params.id },
         _id: req.params.id,
       });
-      
-      if(request.markAsDefault=='true'){
+
+      if (request.markAsDefault == 'true') {
         //other data set as false
-  await signatureModel.updateMany(
-    { _id: { $ne: req.params.id }, /*userId: authUser.id,*/ isDeleted: false },
-    { markAsDefault: false }
-  );
+        await signatureModel.updateMany(
+          { _id: { $ne: req.params.id }, /*userId: authUser.id,*/ isDeleted: false },
+          { markAsDefault: false }
+        );
       }
 
 
@@ -135,7 +139,7 @@ exports.update = async (req, res) => {
         return response.success_message(data, res);
       }
     }
-    
+
   } catch (error) {
     console.log("Error:", error);
     return response.error_message(error.message, res);
@@ -151,6 +155,7 @@ exports.list = async (req, res) => {
     var filter = {
       //userId: authUser.id,
       isDeleted: false,
+      userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId
     };
     if (signatureNameFilter) {
       filter.signatureName = {
@@ -159,14 +164,14 @@ exports.list = async (req, res) => {
     }
     if (signatureId) {
       const signatureToUpdate = await signatureModel.findOneAndUpdate(
-        { _id: signatureId, /*userId: authUser.id,*/ isDeleted: false },
+        { _id: signatureId, userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId, isDeleted: false },
         { markAsDefault: true },
         { new: true }
       );
 
       //other data set as false
       await signatureModel.updateMany(
-        { _id: { $ne: signatureId }, /*userId: authUser.id,*/ isDeleted: false },
+        { _id: { $ne: signatureId }, userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId, isDeleted: false },
         { markAsDefault: false }
       );
     }

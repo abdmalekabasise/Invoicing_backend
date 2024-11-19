@@ -9,6 +9,7 @@ var data;
 exports.create = async (req, res) => {
   try {
     var request = req.body;
+    console.log("product", request);
     const auth_user = verify.verify_token(req.headers.token).details;
     let filePath = "";
     if (req.file) {
@@ -38,7 +39,7 @@ exports.create = async (req, res) => {
         alertQuantity: request.alertQuantity,
         tax: request.tax ? request.tax : null,
         productDescription: request.productDescription,
-        userId: auth_user.id,
+        userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
         images: filePath,
       });
 
@@ -57,10 +58,12 @@ exports.create = async (req, res) => {
 };
 
 exports.list = async (req, res) => {
+  const auth_user = verify.verify_token(req.headers.token).details;
   try {
     const request = req.query;
     let filter = {};
     filter.isDeleted = false;
+    filter.userId = auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId;
 
     if (request.product) {
       let splittedVal = request.product.split(",").map((id) => {
@@ -102,9 +105,10 @@ exports.list = async (req, res) => {
 };
 
 exports.view = async (req, res) => {
+  const auth_user = verify.verify_token(req.headers.token).details;
   try {
     const productsinfo = await productsModel
-      .findOne({ _id: req.params.id })
+      .findOne({ _id: req.params.id, userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId })
       .populate("units")
       .populate("tax")
       .populate("category")
@@ -165,7 +169,7 @@ exports.update = async (req, res) => {
         productDescription: request.productDescription,
         purchase_account: request.purchase_account,
         purchase_description: request.purchase_description,
-        userId: auth_user.id,
+        userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
         images: newImage,
       },
     };
@@ -198,9 +202,10 @@ exports.update = async (req, res) => {
 };
 
 exports.delete = async (req, res) => {
+  const auth_user = verify.verify_token(req.headers.token).details;
   try {
     const product_model = await productsModel.findOneAndUpdate(
-      { _id: req.body._id, isDeleted: { $ne: true } },
+      { _id: req.body._id, isDeleted: { $ne: true }, userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId },
       { $set: { isDeleted: true } },
       { new: true }
     );

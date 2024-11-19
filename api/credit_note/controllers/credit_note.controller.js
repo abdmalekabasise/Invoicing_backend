@@ -53,7 +53,7 @@ exports.create = async (req, res) => {
       signatureName: request.signatureName,
       signatureImage: request.sign_type === "eSignature" ? filePath : null,
       isDeleted: false,
-      userId: auth_user.id,
+      userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
       created_at: new Date(),
     });
 
@@ -79,7 +79,7 @@ exports.create = async (req, res) => {
           obj.quantity = item.quantity;
           obj.units = item.unit;
           obj.notes = request.notes;
-          obj.user_id = auth_user.id;
+          obj.user_id = auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId;
           obj.created_at = new Date();
           const inventoryRec = await inventoryModel.create(obj);
         }
@@ -100,9 +100,8 @@ exports.create = async (req, res) => {
 
       const notificationMessage = {
         title: "Notification Message",
-        body: `Credit Note has been created for ${
-          customerName ? customerName.name : ""
-        }`,
+        body: `Credit Note has been created for ${customerName ? customerName.name : ""
+          }`,
       };
 
       if (auth_user.role !== "Super Admin") {
@@ -125,10 +124,12 @@ exports.create = async (req, res) => {
 };
 
 exports.list = async (req, res) => {
+  const auth_user = verify.verify_token(req.headers.token).details;
   try {
     const request = req.query;
     let filter = {
       isDeleted: false,
+      userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId
     };
     if (request.customer) {
       let splittedVal = req.query.customer.split(",").map((id) => {
@@ -236,7 +237,7 @@ exports.update = async (req, res) => {
       signatureName:
         request.sign_type === "eSignature" ? request.signatureName : null,
       signatureImage: request.sign_type === "eSignature" ? newImage : null,
-      userId: auth_user.id,
+      userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
       isDeleted: false,
     };
 
@@ -281,7 +282,7 @@ exports.update = async (req, res) => {
           obj.quantity = item.quantity;
           obj.units = item.unit;
           obj.notes = request.notes;
-          obj.user_id = auth_user.id;
+          obj.user_id = auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId;
           obj.created_at = new Date();
           const inventoryRec = await inventoryModel.create(obj);
         }
@@ -323,7 +324,7 @@ exports.softDelete = async (req, res) => {
     const authUser = verify.verify_token(req.headers.token).details;
 
     const creditNoteRecord = await creditnoteModel.findOneAndUpdate(
-      { _id: req.params.id, isDeleted: { $ne: true } },
+      { _id: req.params.id, isDeleted: { $ne: true }, userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId, },
       { $set: { isDeleted: true } }
     );
 
@@ -355,9 +356,8 @@ exports.softDelete = async (req, res) => {
       const adminRole = await users.findOne({ role: "Super Admin" });
       const notificationMessage = {
         title: "Notification Message",
-        body: `Credit Note has been deleted for ${
-          customerName ? customerName.name : ""
-        }`,
+        body: `Credit Note has been deleted for ${customerName ? customerName.name : ""
+          }`,
       };
 
       if (authUser.role !== "Super Admin") {
@@ -387,7 +387,7 @@ exports.convertToDeliveryChallan = async (req, res) => {
     const auth_user = verify.verify_token(req.headers.token).details;
     const request = req.body;
 
-    const dcCount = await deliverychallanModel.find({}).count();
+    const dcCount = await deliverychallanModel.find({ userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId, }).count();
 
     let count = dcCount + 1;
 
@@ -397,9 +397,8 @@ exports.convertToDeliveryChallan = async (req, res) => {
     if (creditNote.sign_type == "eSignature") {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
       const ext = path.extname(creditNote.signatureImage);
-      deliveryChallanImagePath = `./uploads/delivery_challans/signatureImage-${
-        uniqueSuffix + ext
-      }`;
+      deliveryChallanImagePath = `./uploads/delivery_challans/signatureImage-${uniqueSuffix + ext
+        }`;
       fs.copyFileSync(
         `./${creditNote.signatureImage}`,
         deliveryChallanImagePath
@@ -429,7 +428,7 @@ exports.convertToDeliveryChallan = async (req, res) => {
       signatureName: creditNote.signature_name,
       signatureImage: deliveryChallanImagePath,
       signatureId: creditNote.signatureId ? creditNote.signatureId : null,
-      userId: auth_user.id,
+      userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
     });
 
     // Save the new delivery challan record
@@ -448,8 +447,9 @@ exports.convertToDeliveryChallan = async (req, res) => {
 };
 
 exports.getCreditNotesNumber = async (req, res) => {
+  const auth_user = verify.verify_token(req.headers.token).details;
   try {
-    const creditNoteRecords = await creditnoteModel.find().count();
+    const creditNoteRecords = await creditnoteModel.find({ userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId, }).count();
     const creditNoteNumber = `CN-${(creditNoteRecords + 1)
       .toString()
       .padStart(6, 0)}`;

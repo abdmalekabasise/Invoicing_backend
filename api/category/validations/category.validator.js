@@ -3,28 +3,7 @@ const response = require("../../../response");
 const categoryModel = require("../models/category.model");
 
 exports.create = [
-  body("name")
-    .trim()
-    .notEmpty()
-    .withMessage("is required")
-    .custom(async (value) => {
-      const existingName = await categoryModel.findOne({ name: value });
-      if (existingName) {
-        throw new Error("already exists");
-      }
-      return true;
-    }),
-  body("slug")
-    .trim()
-    .notEmpty()
-    .withMessage("is required")
-    .custom(async (value) => {
-      const existingSlug = await categoryModel.findOne({ slug: value });
-      if (existingSlug) {
-        throw new Error("already exists");
-      }
-      return true;
-    }),
+
   // body("parent_Category").trim().notEmpty().withMessage("is required"),
   body("image").optional(),
   // .custom((value, { req }) => {
@@ -52,34 +31,7 @@ exports.create = [
 ];
 
 exports.update = [
-  body("name")
-    .trim()
-    .notEmpty()
-    .withMessage("is required")
-    .custom(async (value, { req }) => {
-      const existingName = await categoryModel.findOne({
-        _id: { $ne: req.params.id },
-        name: value,
-      });
-      if (existingName) {
-        throw new Error("already exists");
-      }
-      return true;
-    }),
-  body("slug")
-    .trim()
-    .notEmpty()
-    .withMessage("is required")
-    .custom(async (value, { req }) => {
-      const existingSlug = await categoryModel.findOne({
-        _id: { $ne: req.params.id },
-        slug: value,
-      });
-      if (existingSlug) {
-        throw new Error("already exists");
-      }
-      return true;
-    }),
+
   // body("parent_Category").trim().notEmpty().withMessage("is required"),
   // body("type").trim().notEmpty().withMessage("is required"),
   body("image").optional(),

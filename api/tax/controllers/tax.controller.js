@@ -13,6 +13,7 @@ exports.create = async (req, res) => {
     const dublicateRec = await taxModel.findOne({
       name: { $regex: new RegExp(`^${name}$`, "i") },
       isDeleted: false,
+      userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId
     });
     if (dublicateRec) {
       data = { message: "Tax name already exists." };
@@ -23,7 +24,7 @@ exports.create = async (req, res) => {
         taxRate: request.taxRate,
         type: request.type,
         status: request.status,
-        userId: auth_user.id,
+        userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId
       });
       data = { message: "Tax Created successfully.", auth: true };
       response.success_message(data, res);
@@ -36,9 +37,11 @@ exports.create = async (req, res) => {
 
 exports.list = async (req, res) => {
   try {
+    const auth_user = verify.verify_token(req.headers.token).details;
     const taxRecs = await taxModel
       .find({
         isDeleted: false,
+        userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId
       })
       .skip(req.query.skip)
       .limit(req.query.limit)
@@ -46,6 +49,7 @@ exports.list = async (req, res) => {
     const taxRecordsCount = await taxModel
       .find({
         isDeleted: false,
+        userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId
       })
       .count();
 
@@ -62,7 +66,8 @@ exports.list = async (req, res) => {
 
 exports.view = async (req, res) => {
   try {
-    const taxRec = await taxModel.findOne({ _id: req.params.id });
+    const auth_user = verify.verify_token(req.headers.token).details;
+    const taxRec = await taxModel.findOne({ _id: req.params.id, userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId });
     response.success_message(taxRec, res);
   } catch (error) {
     console.log("error :", error);
@@ -79,6 +84,7 @@ exports.update = async (req, res) => {
     const duplicateRec = await taxModel.findOne({
       _id: { $ne: req.params.id },
       name: { $regex: new RegExp(`^${name}$`, "i") },
+      userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId
     });
     if (duplicateRec) {
       response.validation_error_message(

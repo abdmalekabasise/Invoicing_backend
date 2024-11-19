@@ -11,7 +11,7 @@ exports.updateCompanySetting = async (req, res) => {
     const files = req.files;
     const authUser = verify.verify_token(req.headers.token).details;
     const companyRec = await companySettingsModel.findOne({
-      userId: authUser.id,
+      userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
     });
     let siteLogoPath = "";
     let faviconPath = "";
@@ -39,7 +39,7 @@ exports.updateCompanySetting = async (req, res) => {
         siteLogo: siteLogoPath,
         favicon: faviconPath,
         companyLogo: companyLogoPath,
-        userId: authUser.id,
+        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
       });
       let data = {
         message: "Company settings updated successfully",
@@ -79,7 +79,7 @@ exports.updateCompanySetting = async (req, res) => {
       }
       const preferenceRec = await companySettingsModel.findOneAndUpdate(
         {
-          userId: authUser.id,
+          userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
         },
         {
           $set: {
@@ -95,7 +95,7 @@ exports.updateCompanySetting = async (req, res) => {
             siteLogo: siteLogoPath,
             favicon: faviconPath,
             companyLogo: companyLogoPath,
-            userId: authUser.id,
+            userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
           },
         },
         { new: true }
@@ -129,7 +129,7 @@ exports.viewCompanySetting = async (req, res) => {
     const authUser = verify.verify_token(req.headers.token).details;
     const preferenceRec = await companySettingsModel
       .findOne({
-        userId: authUser.id,
+        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
       })
       .lean();
     if (preferenceRec == null) {

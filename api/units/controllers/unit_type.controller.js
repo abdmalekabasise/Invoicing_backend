@@ -15,6 +15,7 @@ exports.create = async function (req, res) {
     {
       name: { $regex: new RegExp(`^${name}$`, "i") },
       isDeleted: false,
+      user_id: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId
     },
     function (err, unittype) {
       if (err) {
@@ -32,7 +33,7 @@ exports.create = async function (req, res) {
                 name: request.name,
                 symbol: request.symbol,
                 //  parent_unit: request.parent_unit,
-                user_id: auth_user.id,
+                user_id: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
                 created_at: new Date(),
               },
               function (err, unittype) {
@@ -64,10 +65,12 @@ exports.create = async function (req, res) {
 };
 
 exports.list = async function (req, res) {
+  const auth_user = verify.verify_token(req.headers.token).details;
   var filter = {};
   const request = req.query;
 
   filter.isDeleted = false;
+  filter.user_id = auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId;
   if (request.unit) {
     let splittedVal = request.unit.split(",").map((id) => {
       return mongoose.Types.ObjectId(id);
@@ -90,8 +93,9 @@ exports.list = async function (req, res) {
 };
 
 exports.view = function (req, res) {
+  const auth_user = verify.verify_token(req.headers.token).details;
   unit_typeModel
-    .findOne({ _id: req.params.id })
+    .findOne({ _id: req.params.id, user_id: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId })
     .select("-__v -updated_at")
     .exec(function (err, unit_type) {
       if (err) {
@@ -130,7 +134,7 @@ exports.update = function (req, res) {
     {
       name: { $regex: new RegExp(`^${name}$`, "i") },
       _id: { $ne: req.params.id },
-      user_id: auth_user.id,
+      user_id: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId
     },
     async (err, dublicaterec) => {
       if (err) {
@@ -163,7 +167,8 @@ exports.update = function (req, res) {
 };
 
 exports.delete = function (req, res) {
-  unit_typeModel.deleteOne({ _id: req.params.id }, function (err, results) {
+  const auth_user = verify.verify_token(req.headers.token).details;
+  unit_typeModel.deleteOne({ _id: req.params.id, user_id: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId }, function (err, results) {
     if (err) {
       data = { message: err.message };
       response.validation_error_message(data, res);

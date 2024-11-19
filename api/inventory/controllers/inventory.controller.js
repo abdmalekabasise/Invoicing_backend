@@ -48,7 +48,7 @@ exports.create = async (req, res) => {
           units: request.units,
           quantity: request.quantity,
           notes: request.notes,
-          user_id: auth_user.id,
+          user_id: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
           isDeleted: false,
           created_at: new Date(),
         },
@@ -134,9 +134,11 @@ exports.update = async (req, res) => {
 //inventory list
 
 exports.list = async (req, res) => {
+  const auth_user = verify.verify_token(req.headers.token).details;
   try {
     const request = req.query;
     const pipeline = [
+      // Lookup inventoryInfo based on productId
       {
         $lookup: {
           from: "inventories",
@@ -146,12 +148,7 @@ exports.list = async (req, res) => {
         },
       },
 
-      // {
-      //   $unwind: {
-      //     path: '$inventoryInfo',
-      //
-      //   },
-      // },
+      // Lookup unit information based on units
       {
         $lookup: {
           from: "unit_types",
@@ -160,16 +157,25 @@ exports.list = async (req, res) => {
           as: "unitInfo",
         },
       },
+
+      // Match products based on userId (whether or not they have inventory)
       {
         $match: {
           isDeleted: false,
+          userId: mongoose.Types.ObjectId(
+            auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId
+          ),
         },
       },
+
+      // Sort products in descending order by _id
       {
         $sort: {
           _id: -1,
         },
       },
+
+      // Project fields, including inventoryInfo (which may be empty)
       {
         $project: {
           "inventoryInfo.units": 1,
@@ -199,7 +205,7 @@ exports.list = async (req, res) => {
               cond: {
                 $and: [
                   {
-                    $eq: ["$$info.isDeleted", false],
+                    $eq: ["$$info.isDeleted", false]
                   },
                 ],
               },
@@ -207,7 +213,10 @@ exports.list = async (req, res) => {
           },
         },
       },
+
     ];
+
+
     if (request.product) {
       let splittedVal = request.product.split(",").map((id) => {
         return mongoose.Types.ObjectId(id);
@@ -241,6 +250,7 @@ exports.filterByProductId = async (req, res) => {
     let filter = {};
     if (req.query.productId) {
       filter.productId = req.query.productId;
+      fitlet.user_id = auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId;
     } else if (req.query.start_date && req.query.end_date) {
       filter.created_at = {
         $gte: new Date(req.query.start_date),

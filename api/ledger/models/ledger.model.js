@@ -45,6 +45,10 @@ const ledger = new Schema({
     type: Boolean,
     default: false,
   },
+  userId: {
+    type: Schema.Types.ObjectId,
+    required: true,
+  },
 });
 
 ledger.plugin(mongoosePaginate);
