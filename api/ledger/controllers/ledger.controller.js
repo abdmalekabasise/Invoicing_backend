@@ -16,6 +16,8 @@ exports.create = async (req, res) => {
       date: request.date,
       reference: request.reference,
       mode: request.mode,
+      userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId
+
     },
     (err, ledger) => {
       if (err) {
@@ -38,6 +40,7 @@ exports.create = async (req, res) => {
                 user_id: auth_user.id,
                 isDeleted: false,
                 created_at: new Date(),
+                userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId
               },
               (err, ledger) => {
                 if (err) {
@@ -68,8 +71,8 @@ exports.create = async (req, res) => {
 };
 
 exports.list = async (req, res) => {
-  // const auth_user = verify.verify_token(req.headers.token).details;
-  const ledgerData = await ledgerModel.find({ vendorId: req.query.vendorId });
+  const auth_user = verify.verify_token(req.headers.token).details;
+  const ledgerData = await ledgerModel.find({ vendorId: req.query.vendorId, userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId });
   var optionsData = {};
   optionsData.select = "-__v -updated_at";
   optionsData.sort = { _id: -1 };
@@ -110,6 +113,7 @@ exports.list = async (req, res) => {
             $match: {
               vendorId: mongoose.Types.ObjectId(item.vendorId),
               created_at: { $lte: item.created_at },
+              userId: mongoose.Types.ObjectId(auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId)
             },
           },
           {

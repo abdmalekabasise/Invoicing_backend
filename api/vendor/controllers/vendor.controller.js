@@ -10,54 +10,32 @@ exports.create = async (req, res) => {
   try {
     var request = req.body;
     const auth_user = verify.verify_token(req.headers.token).details;
-    const vendorrec = await vendorModel.findOne({
-      $and: [
-        { vendor_email: request.vendor_email },
-        { vendor_phone: request.vendor_phone },
-      ],
-    });
-    const vendoremailrec = await vendorModel.findOne({
-      vendor_email: request.vendor_email,
-    });
-    const vendorphnrec = await vendorModel.findOne({
-      vendor_phone: request.vendor_phone,
-    });
 
-    if (vendorrec) {
-      data = { message: "Vendor email and phone already exists.." };
-      response.validation_error_message(data, res);
-    } else if (vendoremailrec) {
-      data = { message: "Vendor email already exists.." };
-      response.validation_error_message(data, res);
-    } else if (vendorphnrec) {
-      data = { message: "Vendor phone number already exists.." };
-      response.validation_error_message(data, res);
-    } else {
-      try {
-        console.log("request.balanceType.length :", request.balanceType.length);
-        const vendorrec = await vendorModel.create({
-          vendor_name: request.vendor_name,
+    try {
+      console.log("request.balanceType.length :", request.balanceType.length);
+      const vendorrec = await vendorModel.create({
+        vendor_name: request.vendor_name,
 
-          vendor_email: request.vendor_email,
-          vendor_phone: request.vendor_phone,
-          balance: request.balance,
-          balanceType: request.balanceType,
-          user_id: auth_user.id,
-          isDeleted: false,
-          created_at: new Date(),
-        });
-        if (vendorrec) {
-          data = {
-            message: "Vendor Created successfully.",
-            auth: true,
-          };
-          response.success_message(data, res);
-        }
-      } catch (err) {
-        data = { message: err.message };
-        response.validation_error_message(data, res);
+        vendor_email: request.vendor_email,
+        vendor_phone: request.vendor_phone,
+        balance: request.balance,
+        balanceType: request.balanceType,
+        user_id: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
+        isDeleted: false,
+        created_at: new Date(),
+      });
+      if (vendorrec) {
+        data = {
+          message: "Vendor Created successfully.",
+          auth: true,
+        };
+        response.success_message(data, res);
       }
+    } catch (err) {
+      data = { message: err.message };
+      response.validation_error_message(data, res);
     }
+
   } catch (error) {
     console.log("error :", error);
     response.error_message(error.message, res);
@@ -65,10 +43,12 @@ exports.create = async (req, res) => {
 };
 
 exports.list = async function (req, res) {
+  const auth_user = verify.verify_token(req.headers.token).details;
   try {
     const request = req.query;
     let filter = {};
     filter.isDeleted = false;
+    filter.user_id = auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId;
 
     if (request.vendor) {
       let splittedVal = request.vendor.split(",").map((id) => {
@@ -95,6 +75,7 @@ exports.list = async function (req, res) {
         {
           $match: {
             vendorId: mongoose.Types.ObjectId(item._id),
+            user_id: auth_user.role === "Super Admin" ? mongoose.Types.ObjectId(auth_user.id) : mongoose.Types.ObjectId(auth_user.userId)
           },
         },
         {
@@ -130,9 +111,10 @@ exports.list = async function (req, res) {
 };
 
 exports.view = async (req, res) => {
+  const auth_user = verify.verify_token(req.headers.token).details;
   try {
     const vendorinfo = await vendorModel
-      .findOne({ _id: req.params.id })
+      .findOne({ _id: req.params.id, user_id: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId })
       .select("-__v -updated_at");
 
     if (vendorinfo) {
@@ -155,6 +137,7 @@ exports.view = async (req, res) => {
 };
 
 exports.update = async (req, res) => {
+  const auth_user = verify.verify_token(req.headers.token).details;
   try {
     var request = req.body;
     var newvalues = {
@@ -164,44 +147,21 @@ exports.update = async (req, res) => {
         vendor_phone: request.vendor_phone,
         balance: request.balance,
         balanceType: request.balanceType,
+        user_id: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId
       },
     };
 
-    const dublicaterec = await vendorModel.findOne({
-      $and: [
-        { vendor_email: request.vendor_email },
-        { vendor_phone: request.vendor_phone },
-      ],
-      _id: { $ne: req.params.id },
-    });
-    const duplicateemail = await vendorModel.findOne({
-      vendor_email: request.vendor_email,
-      _id: { $ne: req.params.id },
-    });
-    const duplicatephn = await vendorModel.findOne({
-      vendor_phone: request.vendor_phone,
-      _id: { $ne: req.params.id },
-    });
 
-    if (dublicaterec) {
-      data = { message: "Vendor email and phone already exists.." };
-      response.validation_error_message(data, res);
-    } else if (duplicateemail) {
-      data = { message: "Vendor email already exists.." };
-      response.validation_error_message(data, res);
-    } else if (duplicatephn) {
-      data = { message: "Vendor phone number already exists.." };
-      response.validation_error_message(data, res);
-    } else {
-      const vendorec = await vendorModel.findByIdAndUpdate(
-        req.params.id,
-        newvalues
-      );
-      if (vendorec) {
-        data = { message: "vendor updated successfully." };
-        response.success_message(data, res);
-      }
+
+    const vendorec = await vendorModel.findByIdAndUpdate(
+      req.params.id,
+      newvalues
+    );
+    if (vendorec) {
+      data = { message: "vendor updated successfully." };
+      response.success_message(data, res);
     }
+
   } catch (error) {
     console.log("error :", error);
     response.error_message(error.message, res);
@@ -209,9 +169,10 @@ exports.update = async (req, res) => {
 };
 
 exports.softDelete = async (req, res) => {
+  const auth_user = verify.verify_token(req.headers.token).details;
   try {
     const vendor = await vendorModel.findOneAndUpdate(
-      { _id: req.params.id, isDeleted: { $ne: true } },
+      { _id: req.params.id, isDeleted: { $ne: true }, user_id: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId },
       { $set: { isDeleted: true } }
     );
     data = { message: "Deleted Successfully", deletedCount: 1 };

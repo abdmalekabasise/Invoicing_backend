@@ -15,6 +15,7 @@ const users = require("../../auth/models/auth.model");
 var data;
 
 exports.create = async (req, res) => {
+  console.log("quotation")
   try {
     var request = req.body;
     const auth_user = verify.verify_token(req.headers.token).details;
@@ -22,7 +23,7 @@ exports.create = async (req, res) => {
     if (req.file) {
       filePath = req.file.path;
     }
-    const qtCount = await quotationModel.find({}).count();
+    const qtCount = await quotationModel.find({ userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId }).count();
 
     let count = qtCount + 1;
     const quotationRec = await quotationModel.create({
@@ -50,7 +51,7 @@ exports.create = async (req, res) => {
       signatureName: request.signatureName,
       signatureImage: request.sign_type === "eSignature" ? filePath : null,
       isDeleted: false,
-      userId: auth_user.id,
+      userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
       created_at: new Date(),
     });
     const customerName = await customerModel.findById(request.customerId);
@@ -90,10 +91,13 @@ exports.create = async (req, res) => {
 };
 
 exports.list = async (req, res) => {
+
   try {
+    const auth_user = verify.verify_token(req.headers.token).details;
     const request = req.query;
     let filter = {
       isDeleted: false,
+      userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId
     };
 
     if (request.customer) {
@@ -140,8 +144,9 @@ exports.list = async (req, res) => {
 
 exports.view = async (req, res) => {
   try {
+    const auth_user = verify.verify_token(req.headers.token).details;
     const quotationRec = await quotationModel
-      .findOne({ _id: req.params.id })
+      .findOne({ _id: req.params.id, userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId })
       .populate("customerId")
       .populate({ path: "signatureId" })
       .lean();
@@ -160,6 +165,7 @@ exports.view = async (req, res) => {
 
 exports.update = async (req, res) => {
   try {
+
     const auth_user = verify.verify_token(req.headers.token).details;
     const request = req.body;
     const quotation_id = req.params.id;
@@ -205,7 +211,6 @@ exports.update = async (req, res) => {
         request.sign_type === "eSignature" ? request.signatureName : null,
       signatureImage: request.sign_type === "eSignature" ? newImage : null,
       isDeleted: false,
-      userId: auth_user.id,
     };
 
     const updatedqt = await quotationModel.findByIdAndUpdate(
@@ -258,6 +263,7 @@ exports.update = async (req, res) => {
 
 exports.softDelete = async (req, res) => {
   try {
+
     const auth_user = verify.verify_token(req.headers.token).details;
     // let request = req.body;
 
@@ -280,9 +286,8 @@ exports.softDelete = async (req, res) => {
           await notification.sendFCMMessage(
             {
               title: "Notification Message",
-              body: `Quotation has been Deleted for ${
-                customer ? customer.name : "Unknown Customer"
-              }`,
+              body: `Quotation has been Deleted for ${customer ? customer.name : "Unknown Customer"
+                }`,
             },
             [adminRole._id]
           );
@@ -294,9 +299,8 @@ exports.softDelete = async (req, res) => {
         await notification.sendFCMMessage(
           {
             title: "Notification Message",
-            body: `Quotation has been Deleted for ${
-              customer ? customer.name : "Unknown Customer"
-            }`,
+            body: `Quotation has been Deleted for ${customer ? customer.name : "Unknown Customer"
+              }`,
           },
           [adminRole._id]
         );
@@ -322,7 +326,7 @@ exports.convertToInvoice = async (req, res) => {
     const authUser = verify.verify_token(req.headers.token).details;
     const request = req.body;
 
-    const invoiceModelcount = await invoiceModel.find({}).count();
+    const invoiceModelcount = await invoiceModel.find({ userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId }).count();
     let count = invoiceModelcount + 1;
 
     // Retrieve the quotation to be converted
@@ -331,9 +335,8 @@ exports.convertToInvoice = async (req, res) => {
     if (quotation.sign_type == "eSignature") {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
       const ext = path.extname(quotation.signatureImage);
-      invoiceImagePath = `./uploads/invoices/signatureImage-${
-        uniqueSuffix + ext
-      }`;
+      invoiceImagePath = `./uploads/invoices/signatureImage-${uniqueSuffix + ext
+        }`;
       fs.copyFileSync(`./${quotation.signatureImage}`, invoiceImagePath);
     }
 
@@ -383,7 +386,7 @@ exports.convertToInvoice = async (req, res) => {
             signatureId: quotation.signatureId ? quotation.signatureId : null,
             isRecurring: request.isRecurring,
             recurringCycle: request.recurringCycle ? request.recurringCycle : 0,
-            userId: authUser.id,
+            userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
             status: "DRAFTED",
             created_at: new Date(),
             isDeleted: false,
@@ -445,9 +448,8 @@ exports.cloneQuotation = async (req, res) => {
     if (originalQuotation.sign_type == "eSignature") {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
       const ext = path.extname(originalQuotation.signatureImage);
-      const quotationImagePath = `./uploads/quotation/signatureImage-${
-        uniqueSuffix + ext
-      }`;
+      const quotationImagePath = `./uploads/quotation/signatureImage-${uniqueSuffix + ext
+        }`;
       fs.copyFileSync(
         `./${originalQuotation.signatureImage}`,
         quotationImagePath
@@ -474,7 +476,8 @@ exports.cloneQuotation = async (req, res) => {
 
 exports.getQuotationNumber = async (req, res) => {
   try {
-    const creditNoteRecords = await quotationModel.find().count();
+    const auth_user = verify.verify_token(req.headers.token).details;
+    const creditNoteRecords = await quotationModel.find({ userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId }).count();
     const creditNoteNumber = `QUO-${(creditNoteRecords + 1)
       .toString()
       .padStart(6, 0)}`;

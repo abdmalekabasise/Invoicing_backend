@@ -106,7 +106,7 @@ exports.create = async (req, res) => {
             isRecurring: request.isRecurring,
             recurringCycle: request.recurringCycle ? request.recurringCycle : 0,
             total: request.total,
-            userId: authUser.id,
+            userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
             status: status,
             created_at: new Date(),
             isDeleted: false,
@@ -215,14 +215,18 @@ getcusidsbysearch = async (authUser, key) => {
 
 // for dropdown
 exports.customer_list = async (req, res) => {
+  const authUser = verify.verify_token(req.headers.token).details;
   try {
     var filter = {};
+    filter.isDeleted = false;
+    filter.userId = authUser.role === "Super Admin" ? authUser.id : authUser.userId;
     if (req.query.name) filter = { $or: [] };
     if (req.query.name)
       filter.$or.push({
         customer_name: { $regex: req.query.name, $options: "i" },
       });
-    filter.isDeleted = false;
+
+    console.log(filter);
 
     customersModel
       .find(filter)
@@ -237,6 +241,7 @@ exports.customer_list = async (req, res) => {
 };
 
 exports.list = async function (req, res) {
+  const authUser = verify.verify_token(req.headers.token).details;
   try {
     let options = {};
     options.select = "-__v -updated_at";
@@ -248,7 +253,8 @@ exports.list = async function (req, res) {
     options.lean = true;
     var filter = {};
     filter.isDeleted = false;
-    filter.isSalesReturned=false;
+    filter.isSalesReturned = false;
+    filter.userId = authUser.role === "Super Admin" ? authUser.id : authUser.userId;
     const fromDateFilter = moment(req.query.fromDate);
     const endFDateFilter = moment(req.query.toDate);
 
@@ -370,10 +376,11 @@ exports.list = async function (req, res) {
 
 // Card count function Start
 exports.cardCount = async function (req, res) {
+  const authUser = verify.verify_token(req.headers.token).details;
   try {
     var filter = {};
     let _ids = [];
-    const invoiceRec = await invoiceModel.find({ status: "PARTIALLY_PAID" });
+    const invoiceRec = await invoiceModel.find({ status: "PARTIALLY_PAID", userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId });
     for (const item of invoiceRec) {
       _ids.push(mongoose.Types.ObjectId(item._id));
     }
@@ -381,6 +388,7 @@ exports.cardCount = async function (req, res) {
       {
         $match: {
           invoiceId: { $in: _ids },
+          userId: mongoose.Types.ObjectId(authUser.role === "Super Admin" ? authUser.id : authUser.userId)
         },
       },
       {
@@ -394,6 +402,7 @@ exports.cardCount = async function (req, res) {
       {
         $match: {
           isSalesReturned: false,
+          userId: mongoose.Types.ObjectId(authUser.role === "Super Admin" ? authUser.id : authUser.userId)
         },
       },
       {
@@ -409,6 +418,7 @@ exports.cardCount = async function (req, res) {
         $match: {
           status: { $nin: ["PAID", "DRAFTED", "SENT"] },
           isSalesReturned: false,
+          userId: mongoose.Types.ObjectId(authUser.role === "Super Admin" ? authUser.id : authUser.userId)
         },
       },
       {
@@ -429,6 +439,7 @@ exports.cardCount = async function (req, res) {
           dueDate: { $lt: new Date() },
           status: { $nin: ["PAID", "PARTIALLY_PAID"] },
           isSalesReturned: false,
+          userId: mongoose.Types.ObjectId(authUser.role === "Super Admin" ? authUser.id : authUser.userId)
         },
       },
       {
@@ -443,6 +454,7 @@ exports.cardCount = async function (req, res) {
       {
         $match: {
           status: "CANCELLED",
+          userId: mongoose.Types.ObjectId(authUser.role === "Super Admin" ? authUser.id : authUser.userId)
         },
       },
       {
@@ -459,6 +471,7 @@ exports.cardCount = async function (req, res) {
           dueDate: { $gt: new Date() },
           status: { $in: ["DRAFTED", "SENT"] },
           isSalesReturned: false,
+          userId: mongoose.Types.ObjectId(authUser.role === "Super Admin" ? authUser.id : authUser.userId)
         },
       },
       {
@@ -473,6 +486,7 @@ exports.cardCount = async function (req, res) {
       {
         $match: {
           isRecurring: true,
+          userId: mongoose.Types.ObjectId(authUser.role === "Super Admin" ? authUser.id : authUser.userId)
         },
       },
       {
@@ -558,23 +572,23 @@ exports.sendPdf = async (req, res) => {
     ).toFixed(2);
     const baseDirectory = resolve(__dirname, '..', '..', '..'); // Adjust the number of '..' as needed
     const invoicesPdfDirectory = 'uploads/invoicesPdf';
- const fileName = 'invoice.pdf';
+    const fileName = 'invoice.pdf';
 
-// Using join to create complete paths
-const folderPath = join(baseDirectory, invoicesPdfDirectory);
-const fullPath = join(folderPath, fileName);
+    // Using join to create complete paths
+    const folderPath = join(baseDirectory, invoicesPdfDirectory);
+    const fullPath = join(folderPath, fileName);
 
-  if (!fs.existsSync(folderPath)) {
-  fs.mkdirSync(folderPath, { recursive: true });
- }
+    if (!fs.existsSync(folderPath)) {
+      fs.mkdirSync(folderPath, { recursive: true });
+    }
 
-if (fs.existsSync(fullPath)) {
-  fs.unlinkSync(fullPath);
-}
-  const htmlTemplate = fs.readFileSync("receipt.html", "utf-8");
+    if (fs.existsSync(fullPath)) {
+      fs.unlinkSync(fullPath);
+    }
+    const htmlTemplate = fs.readFileSync("receipt.html", "utf-8");
     const template = handlebars.compile(htmlTemplate);
     const renderedHtml = template({ invoice: invoiceinfo });
-   // const browser = await puppeteer.launch({ headless: true });
+    // const browser = await puppeteer.launch({ headless: true });
     const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
     const page = await browser.newPage();
 
@@ -588,44 +602,44 @@ if (fs.existsSync(fullPath)) {
     const emailSettings = await emailSettingModel.findOne().lean();
 
     let mailres;
-  if(emailSettings!=null){
-    const transporters = await createTransporters();
-    const nodeTransporter = transporters.nodeTransporter;
-    const smtpTransporter = transporters.smtpTransporter;
+    if (emailSettings != null) {
+      const transporters = await createTransporters();
+      const nodeTransporter = transporters.nodeTransporter;
+      const smtpTransporter = transporters.smtpTransporter;
 
-    if (emailSettings.provider_type === "NODE") {
-      mailres = await nodeTransporter.sendMail({
-        from: `${emailSettings.nodeFromName} <${emailSettings.nodeFromEmail}>`,
-        to: invoiceinfo.customerId.email,
-        subject: subject,
-        html: emailBody,
-        attachments: [
-          {
-            filename: "invoice.pdf",
-            path: fullPath,
-            contentType: "application/pdf",
-          },
-        ],
-      });
-    } else {
-      mailres = await smtpTransporter.sendMail({
-        from: `${emailSettings.smtpFromName} <${emailSettings.smtpFromEmail}>`,
-        to: invoiceinfo.customerId.email,
-        subject: subject,
-        html: emailBody,
-        attachments: [
-          {
-            filename: "invoice.pdf",
-            path: fullPath,
-            contentType: "application/pdf",
-          },
-        ],
-      });
+      if (emailSettings.provider_type === "NODE") {
+        mailres = await nodeTransporter.sendMail({
+          from: `${emailSettings.nodeFromName} <${emailSettings.nodeFromEmail}>`,
+          to: invoiceinfo.customerId.email,
+          subject: subject,
+          html: emailBody,
+          attachments: [
+            {
+              filename: "invoice.pdf",
+              path: fullPath,
+              contentType: "application/pdf",
+            },
+          ],
+        });
+      } else {
+        mailres = await smtpTransporter.sendMail({
+          from: `${emailSettings.smtpFromName} <${emailSettings.smtpFromEmail}>`,
+          to: invoiceinfo.customerId.email,
+          subject: subject,
+          html: emailBody,
+          attachments: [
+            {
+              filename: "invoice.pdf",
+              path: fullPath,
+              contentType: "application/pdf",
+            },
+          ],
+        });
+      }
     }
-  }
     if (mailres) {
       response.success_message({ message: "Mail sent successfully!" }, res);
-    }else{
+    } else {
       data = { message: "From email is empty!" };
       response.validation_error_message(data, res);
 
@@ -637,11 +651,13 @@ if (fs.existsSync(fullPath)) {
 };
 
 exports.view = async function (req, res) {
+  const authUser = verify.verify_token(req.headers.token).details;
   try {
     const invoiceinfo = await invoiceModel
       .findOne({
         _id: mongoose.Types.ObjectId(req.params.id),
         is_deleted: false,
+        userId: mongoose.Types.ObjectId(authUser.role === "Super Admin" ? authUser.id : authUser.userId)
       })
       .populate({ path: "customerId", select: "-updated_at -__v" })
       .populate({ path: "signatureId", select: "-updated_at -__v" })
@@ -801,7 +817,7 @@ exports.update = async (req, res) => {
           isRecurring: request.isRecurring,
           recurringCycle: request.recurringCycle ? request.recurringCycle : 0,
           total: request.total,
-          userId: authUser.id,
+          userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId
         },
       };
 
@@ -810,7 +826,7 @@ exports.update = async (req, res) => {
       }
 
       const dublicaterec = await invoiceModel.findOne({
-        userId: authUser.id,
+        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
         invoiceNumber: request.invoiceNumber,
         _id: { $ne: req.params.id },
       });
@@ -865,7 +881,7 @@ exports.update = async (req, res) => {
               obj.quantity = -item.quantity;
               obj.units = item.unit;
               obj.notes = request.notes;
-              obj.userId = authUser.id;
+              obj.userId = authUser.role === "Super Admin" ? authUser.id : authUser.userId
               obj.created_at = new Date();
               const inventoryRec = await inventoryModel.create(obj);
             }
@@ -998,9 +1014,8 @@ exports.cloneInvoice = async function (req, res) {
     if (originalInvoice.sign_type == "eSignature") {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
       const ext = path.extname(originalInvoice.signatureImage);
-      const invoiceImagePath = `./uploads/invoices/signatureImage-${
-        uniqueSuffix + ext
-      }`;
+      const invoiceImagePath = `./uploads/invoices/signatureImage-${uniqueSuffix + ext
+        }`;
       fs.copyFileSync(`./${originalInvoice.signatureImage}`, invoiceImagePath);
 
       originalInvoice.signatureImage = invoiceImagePath;
@@ -1020,10 +1035,10 @@ exports.cloneInvoice = async function (req, res) {
     if (minQuanProducts.length > 0) {
       response.validation_error_message({ message: minQuanProducts }, res);
     } else {
-      const invoiceModelCount = await invoiceModel.countDocuments({});
+      const invoiceModelCount = await invoiceModel.countDocuments({ userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId });
       let count = invoiceModelCount + 1;
 
-      const invoiceSettings = await invoiceSettingsModel.find().lean();
+      const invoiceSettings = await invoiceSettingsModel.find({ userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId }).lean();
       const clonedInvoice = new invoiceModel(originalInvoice.toObject());
       clonedInvoice._id = mongoose.Types.ObjectId();
       clonedInvoice.status = "DRAFTED";
@@ -1108,16 +1123,15 @@ exports.convertsalesreturn = async (req, res) => {
     if (originalInvoiceDetails.sign_type == "eSignature") {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
       const ext = path.extname(originalInvoiceDetails.signatureImage);
-      creditNoteImagePath = `./uploads/credit_notes/signatureImage-${
-        uniqueSuffix + ext
-      }`;
+      creditNoteImagePath = `./uploads/credit_notes/signatureImage-${uniqueSuffix + ext
+        }`;
       fs.copyFileSync(
         `./${originalInvoiceDetails.signatureImage}`,
         creditNoteImagePath
       );
     }
-    
- const creditnotecount = await creditnoteModel.find({}).count();
+
+    const creditnotecount = await creditnoteModel.find({}).count();
     let count = creditnotecount + 1;
     // return res.status(200).json({ originalInvoice: originalInvoice });
     creditnoteModel.create(
@@ -1148,7 +1162,7 @@ exports.convertsalesreturn = async (req, res) => {
         signatureId: originalInvoiceDetails.signatureId
           ? originalInvoiceDetails.signatureId
           : null,
-        userId: authUser.id,
+        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId
       },
       async (err, crnrec) => {
         if (err) {
@@ -1229,13 +1243,14 @@ exports.convertRecurringInvoice = async (req, res) => {
 };
 
 exports.getInvoiceNumber = async (req, res) => {
+  const authUser = verify.verify_token(req.headers.token).details;
   try {
-    const invoiceSettingRecord = await invoiceSettingsModel.findOne({}).lean();
+    const invoiceSettingRecord = await invoiceSettingsModel.findOne({ userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId }).lean();
     let invoicePrefix = "";
     if (invoiceSettingRecord && invoiceSettingRecord.invoicePrefix) {
       invoicePrefix = invoiceSettingRecord.invoicePrefix;
     }
-    const invoiceRecords = await invoiceModel.find().count();
+    const invoiceRecords = await invoiceModel.find({ userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId }).count();
     const invoiceNumber = `${invoicePrefix}${(invoiceRecords + 1)
       .toString()
       .padStart(6, 0)}`;
@@ -1248,8 +1263,8 @@ exports.getInvoiceNumber = async (req, res) => {
 
 exports.generateDeliveryChallans = async (req, res) => {
   try {
-    const auth_user = verify.verify_token(req.headers.token).details;
-    const DeliveryChallansCount = await delivery_challansModel.find().count();
+    const authUser = verify.verify_token(req.headers.token).details;
+    const DeliveryChallansCount = await delivery_challansModel.find({ userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId }).count();
     const count = DeliveryChallansCount + 1;
     const invoiceRecord = await invoiceModel.findById(req.params.id);
     const customerRecord = await customerModel
@@ -1260,9 +1275,8 @@ exports.generateDeliveryChallans = async (req, res) => {
     if (invoiceRecord.sign_type == "eSignature") {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
       const ext = path.extname(invoiceRecord.signatureImage);
-      imagePath = `./uploads/delivery_challans/signatureImage-${
-        uniqueSuffix + ext
-      }`;
+      imagePath = `./uploads/delivery_challans/signatureImage-${uniqueSuffix + ext
+        }`;
       fs.copyFileSync(`./${invoiceRecord.signatureImage}`, imagePath);
     }
 
@@ -1289,7 +1303,7 @@ exports.generateDeliveryChallans = async (req, res) => {
       signatureName: invoiceRecord.signatureName,
       signatureImage:
         invoiceRecord.sign_type === "eSignature" ? imagePath : null,
-      userId: auth_user.id,
+      userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId
     });
     response.success_message("DeliveryChallan created successfully", res);
   } catch (error) {

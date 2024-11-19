@@ -10,7 +10,7 @@ exports.updateInvoiceTemplate = async (req, res) => {
     const filter = { userId: authUser.id };
     const update = {
       default_invoice_template: request.default_invoice_template,
-      userId: authUser.id,
+      userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId
     };
     const options = { new: true, upsert: true };
 
@@ -34,7 +34,7 @@ exports.viewInvoiceTemplate = async (req, res) => {
     const authUser = verify.verify_token(req.headers.token).details;
     const invoiceTemplateRecord = await invoiceTemplateModel
       .findOne({
-        userId: authUser.id,
+        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId
       })
       .lean();
     if (invoiceTemplateRecord == null) {

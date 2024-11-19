@@ -8,7 +8,7 @@ exports.updatePreference = async (req, res) => {
     const files = req.files;
     const authUser = verify.verify_token(req.headers.token).details;
     const prefRec = await preferenceSettingsModel.findOne({
-      userId: authUser.id,
+      userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId
     });
 
     if (prefRec == null) {
@@ -29,7 +29,7 @@ exports.updatePreference = async (req, res) => {
     } else {
       const preferenceRec = await preferenceSettingsModel.findOneAndUpdate(
         {
-          userId: authUser.id,
+          userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
         },
         {
           $set: {
@@ -39,7 +39,7 @@ exports.updatePreference = async (req, res) => {
             // dateFormat: request.dateFormat ? request.dateFormat : " ",
             // timeFormat: request.timeFormat ? request.timeFormat : " ",
             // financialYear: request.financialYear ? request.financialYear : " ",
-            userId: authUser.id,
+            userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
           },
         },
         { new: true }
@@ -62,7 +62,7 @@ exports.viewPreferences = async (req, res) => {
   try {
     const authUser = verify.verify_token(req.headers.token).details;
     const preferenceRec = await preferenceSettingsModel
-      .findOne({ userId: authUser.id })
+      .findOne({ userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId })
       .populate("currencyInfo")
       .lean();
 

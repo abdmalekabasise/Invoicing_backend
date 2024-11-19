@@ -10,7 +10,7 @@ exports.updateInvoiceSetting = async (req, res) => {
     const files = req.files;
     const authUser = verify.verify_token(req.headers.token).details;
     const invoiceSettingsRec = await invoiceSettingsModel.findOne({
-      userId: authUser.id,
+      userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
     });
     let invoiceLogoPath = "";
 
@@ -21,7 +21,7 @@ exports.updateInvoiceSetting = async (req, res) => {
       const rec = await invoiceSettingsModel.create({
         invoicePrefix: request.invoicePrefix,
         invoiceLogo: invoiceLogoPath,
-        userId: authUser.id,
+        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
       });
       let data = {
         message: "invoice settings updated successfully",
@@ -44,13 +44,13 @@ exports.updateInvoiceSetting = async (req, res) => {
 
       const preferenceRec = await invoiceSettingsModel.findOneAndUpdate(
         {
-          userId: authUser.id,
+          userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
         },
         {
           $set: {
             invoicePrefix: request.invoicePrefix,
             invoiceLogo: invoiceLogoPath,
-            userId: authUser.id,
+            userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
           },
         },
         { new: true }
@@ -77,7 +77,7 @@ exports.viewInvoiceSetting = async (req, res) => {
     const authUser = verify.verify_token(req.headers.token).details;
     const preferenceRec = await invoiceSettingsModel
       .findOne({
-        userId: authUser.id,
+        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
       })
       .lean();
     if (preferenceRec == null) {

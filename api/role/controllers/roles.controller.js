@@ -8,26 +8,28 @@ const resUpdate = require("../../common/date");
 
 exports.addRole = async (req, res) => {
   try {
-    const userId = verify_token(req.headers.token).details.id;
-    req.body.userId = userId;
+    const authUser = verify_token(req.headers.token).details;
+    req.body.userId = authUser.role === "Super Admin" ? authUser.id : authUser.userId
     const roleName = req.body.roleName.trim().toLowerCase();
 
     const role = await rolesModel.findOne({
-      userId: userId,
       roleName: { $regex: new RegExp(`^${roleName}$`, "i") },
+      userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId
     });
 
     if (role) {
       data = { message: "Role name already exists." };
       response.validation_error_message(data, res);
     } else {
-      const result = await rolesModel.create(req.body);
+      const result = await rolesModel.create({
+        ...req.body
+      });
       if (result) {
         let allModules = result.roleName == "Super Admin" ? true : false;
         permissionObj = {
           roleId: result._id,
           roleName: req.body.roleName,
-          userId: userId,
+          userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
           allModules: allModules,
           modules: [
             {
@@ -386,7 +388,9 @@ exports.addRole = async (req, res) => {
           ],
         };
 
-        const permissionRec = await permissionModel.create(permissionObj);
+        const permissionRec = await permissionModel.create({
+          ...permissionObj
+        });
         response.success_message({ message: "role added successfully" }, res);
       }
     }
@@ -398,7 +402,7 @@ exports.addRole = async (req, res) => {
 
 exports.updateRole = async (req, res) => {
   try {
-    const userId = verify_token(req.headers.token).details.id;
+    const authUser = verify_token(req.headers.token).details;
 
     //restrict to edit the super admin role
     const roleToUpdate = await rolesModel.findById(req.params.id);
@@ -416,7 +420,7 @@ exports.updateRole = async (req, res) => {
 
     const role = await rolesModel.findOne({
       _id: { $ne: req.params.id },
-      user_id: userId,
+      userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
       roleName: { $regex: new RegExp(`^${roleName}$`, "i") },
     });
     if (role) {
@@ -461,7 +465,8 @@ exports.updateRole = async (req, res) => {
 
 exports.getRoles = async (req, res) => {
   try {
-    const roleRec = await rolesModel.find().lean();
+    const authUser = verify_token(req.headers.token).details;
+    const roleRec = await rolesModel.find({ userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId }).lean();
     if (roleRec.length > 0) {
       roleRec.forEach((item) => {
         item.createdAt = resUpdate.resDate(item.createdAt);

@@ -24,7 +24,7 @@ exports.create = async (req, res) => {
     if (req.file) {
       filePath = req.file.path;
     }
-    const purchaseOrderCount = await purchaseorderModel.find({}).count();
+    const purchaseOrderCount = await purchaseorderModel.find({ userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId }).count();
     const bankValue = request.bank;
     const bankObjectId = bankValue ? mongoose.Types.ObjectId(bankValue) : null;
 
@@ -53,7 +53,7 @@ exports.create = async (req, res) => {
       signatureId: request.signatureId,
       signatureName: request.signatureName,
       signatureImage: request.sign_type === "eSignature" ? filePath : null,
-      userId: authUser.id,
+      userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
       isDeleted: false,
     });
 
@@ -88,10 +88,13 @@ exports.create = async (req, res) => {
 };
 
 exports.list = async (req, res) => {
+  const authUser = verify.verify_token(req.headers.token).details;
+
   try {
     const request = req.query;
     let filter = {
       isDeleted: false,
+      userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId
     };
     if (request.vendor) {
       let splittedVal = request.vendor.split(",").map((id) => {
@@ -128,9 +131,10 @@ exports.list = async (req, res) => {
 };
 
 exports.view = async (req, res) => {
+  const authUser = verify.verify_token(req.headers.token).details;
   try {
     const purchaseOrderRec = await purchaseorderModel
-      .findOne({ _id: req.params.id })
+      .findOne({ _id: req.params.id, userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId })
       .populate("vendorId")
       .populate("signatureId")
       .populate("bank");
@@ -190,7 +194,7 @@ exports.update = async (req, res) => {
       signatureName:
         request.sign_type === "eSignature" ? request.signatureName : null,
       signatureImage: request.sign_type === "eSignature" ? newImage : null,
-      userId: authUser.id,
+      userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
       isDeleted: false,
     };
 
@@ -208,7 +212,7 @@ exports.update = async (req, res) => {
 
       const vendorName = await vendor.findOne(request._id);
 
-      const adminRole = await users.findOne({ role: "Super Admin" });
+      const adminRole = await users.findOne({ role: "Super Admin", userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId });
       const notificationMessage = {
         title: "Notification Message",
         body: `PurchaseOrder has been Updated for ${vendorName.vendor_name}`,
@@ -235,7 +239,7 @@ exports.update = async (req, res) => {
 exports.delete = async (req, res) => {
   try {
     const auth_user = verify.verify_token(req.headers.token).details;
-    const results = await purchaseorderModel.deleteOne({ _id: req.params.id });
+    const results = await purchaseorderModel.deleteOne({ _id: req.params.id, userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId });
 
     if (results) {
       var message =
@@ -246,7 +250,7 @@ exports.delete = async (req, res) => {
 
         const vendorName = await vendor.findOne(request._id);
 
-        const adminRole = await users.findOne({ role: "Super Admin" });
+        const adminRole = await users.findOne({ role: "Super Admin", userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId });
         const notificationMessage = {
           title: "Notification Message",
           body: `PurchaseOrder has been created for ${vendorName.vendor_name}`,
@@ -316,7 +320,7 @@ exports.softDelete = async (req, res) => {
     const authUser = verify.verify_token(req.headers.token).details;
     console.log("authUser ====> ? Purchase Order Delete", authUser);
     const purchaseOrder = await purchaseorderModel.findOneAndUpdate(
-      { _id: req.params.id, isDeleted: { $ne: true } },
+      { _id: req.params.id, isDeleted: { $ne: true }, userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId },
       { $set: { isDeleted: true } }
     );
     if (purchaseOrder) {
@@ -352,8 +356,10 @@ exports.softDelete = async (req, res) => {
 
 //filter by vendor
 exports.filterByVendor = async (req, res) => {
+  const authUser = verify.verify_token(req.headers.token).details;
   try {
     let filter = {};
+    filter.userId = authUser.role === "Super Admin" ? authUser.id : authUser.userId;
     let po = [];
     const vendorRec = await purchaseorderModel
       .find(filter)
@@ -372,8 +378,10 @@ exports.filterByVendor = async (req, res) => {
 };
 
 exports.filterByPurchaseOrderId = async (req, res) => {
+  const authUser = verify.verify_token(req.headers.token).details;
   try {
     let filter = {};
+    filter.userId = authUser.role === "Super Admin" ? authUser.id : authUser.userId;
     if (req.query.purchaseOrderId) {
       filter.purchaseOrderId = req.query.purchaseOrderId;
     }
@@ -388,7 +396,7 @@ exports.clonePurchaseOrder = async (req, res) => {
   try {
     const authUser = verify.verify_token(req.headers.token).details;
     const originalOrderId = req.params.id;
-    const purchaseOrderCount = await purchaseorderModel.find({}).count();
+    const purchaseOrderCount = await purchaseorderModel.find({ userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId }).count();
 
     let count = purchaseOrderCount + 1;
 
@@ -398,9 +406,8 @@ exports.clonePurchaseOrder = async (req, res) => {
     if (originalPurchaseOrder.sign_type == "eSignature") {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
       const ext = path.extname(originalPurchaseOrder.signatureImage);
-      const purchaseOrderImagePath = `./uploads/purchase_orders/signatureImage-${
-        uniqueSuffix + ext
-      }`;
+      const purchaseOrderImagePath = `./uploads/purchase_orders/signatureImage-${uniqueSuffix + ext
+        }`;
       fs.copyFileSync(
         `./${originalPurchaseOrder.signatureImage}`,
         purchaseOrderImagePath
@@ -453,9 +460,8 @@ exports.convertToPurchase = async (req, res) => {
     if (purchaseOrder.sign_type == "eSignature") {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
       const ext = path.extname(purchaseOrder.signatureImage);
-      purchaseImagePath = `./uploads/purchases/signatureImage-${
-        uniqueSuffix + ext
-      }`;
+      purchaseImagePath = `./uploads/purchases/signatureImage-${uniqueSuffix + ext
+        }`;
       fs.copyFileSync(`./${purchaseOrder.signatureImage}`, purchaseImagePath);
     }
 
@@ -483,7 +489,7 @@ exports.convertToPurchase = async (req, res) => {
       signatureName: purchaseOrder.signatureName,
       signatureImage: purchaseImagePath,
       signatureId: purchaseOrder.signatureId ? purchaseOrder.signatureId : null,
-      userId: authUser.id,
+      userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId
     });
 
     // Save the new purchase record
@@ -540,8 +546,9 @@ exports.convertToPurchase = async (req, res) => {
 };
 
 exports.getPurchaseOrderNumber = async (req, res) => {
+  const authUser = verify.verify_token(req.headers.token).details;
   try {
-    const purchaseOrderRecords = await purchaseorderModel.find().count();
+    const purchaseOrderRecords = await purchaseorderModel.find({ userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId }).count();
     const purchaseOrderNumber = `PO-${(purchaseOrderRecords + 1)
       .toString()
       .padStart(6, 0)}`;

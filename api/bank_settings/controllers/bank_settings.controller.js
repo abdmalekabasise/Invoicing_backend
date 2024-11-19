@@ -10,7 +10,7 @@ exports.addBank = async (req, res) => {
     const dublicateRec = await bankSettingModel.findOne({
       bankName: { $regex: new RegExp(`^${bankName}$`, "i") },
       accountNumber: request.accountNumber,
-      userId: authUser.id,
+      userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
       isDeleted: false,
     });
     if (dublicateRec) {
@@ -23,7 +23,7 @@ exports.addBank = async (req, res) => {
         branch: request.branch,
         accountNumber: request.accountNumber,
         IFSCCode: request.IFSCCode,
-        userId: authUser.id,
+        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
       });
       data = { message: "bank Created successfully.", auth: true };
       response.success_message(data, res);
@@ -45,6 +45,7 @@ exports.updateBank = async (req, res) => {
       bankName: { $regex: new RegExp(`^${bankName}$`, "i") },
       accountNumber: request.accountNumber,
       isDeleted: false,
+      userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId
     });
 
     if (duplicateRec) {
@@ -79,10 +80,12 @@ exports.updateBank = async (req, res) => {
 
 exports.listBank = async (req, res) => {
   try {
+    const authUser = verify.verify_token(req.headers.token).details;
     const request = req.query;
     const bankRec = await bankSettingModel
       .find({
         isDeleted: false,
+        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId
       })
       .skip(request.skip)
       .limit(request.limit)
@@ -90,6 +93,7 @@ exports.listBank = async (req, res) => {
     const bankRecordsCount = await bankSettingModel
       .find({
         isDeleted: false,
+        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId
       })
       .count();
     bankRec.forEach((item) => {

@@ -7,7 +7,7 @@ exports.updateMail = async (req, res) => {
     const request = req.body;
     const authUser = verify.verify_token(req.headers.token).details;
     const emailSettingRec = await emailSettingModel.findOne({
-      userId: authUser.id,
+      userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
     });
 
     if (emailSettingRec == null) {
@@ -25,7 +25,7 @@ exports.updateMail = async (req, res) => {
         smtpPort: request.smtpPort ? request.smtpPort : "",
         smtpUsername: request.smtpUsername ? request.smtpUsername : "",
         smtpPassword: request.smtpPassword ? request.smtpPassword : "",
-        userId: authUser.id,
+        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
       });
       let data = {
         message: "Email settings updated successfully",
@@ -52,7 +52,7 @@ exports.updateMail = async (req, res) => {
             smtpPort: request.smtpPort ? request.smtpPort : "",
             smtpUsername: request.smtpUsername ? request.smtpUsername : "",
             smtpPassword: request.smtpPassword ? request.smtpPassword : "",
-            userId: authUser.id,
+            userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
           },
         },
         { new: true }
@@ -76,7 +76,7 @@ exports.viewEmailSettings = async (req, res) => {
     const authUser = verify.verify_token(req.headers.token).details;
     const preferenceRec = await emailSettingModel
       .findOne({
-        userId: authUser.id,
+        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
       })
       .lean();
     if (preferenceRec == null) {

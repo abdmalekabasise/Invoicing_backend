@@ -87,7 +87,6 @@ router.post(
   checkAccess.checkAccess("quotation", "create"),
   uploadImage,
   resizeImages,
-  quotationValidator.create,
   quotationController.create
 );
 

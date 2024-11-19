@@ -7,11 +7,11 @@ exports.updatePurchaseReturnTemplate = async (req, res) => {
   try {
     const request = req.body;
     const authUser = verify.verify_token(req.headers.token).details;
-    
-    const filter = { userId: authUser.id };
+
+    const filter = { userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId };
     const update = {
-        default_purchase_return_template: request.default_purchase_return_template,
-      userId: authUser.id,
+      default_purchase_return_template: request.default_purchase_return_template,
+      userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId
     };
     const options = { new: true, upsert: true };
 
@@ -31,7 +31,7 @@ exports.viewPurchaseReturnTemplate = async (req, res) => {
     const authUser = verify.verify_token(req.headers.token).details;
     const purchaseReturnTemplateRecord = await purchaseReturnTemplateModel
       .findOne({
-        userId: authUser.id,
+        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId
       })
       .lean();
     if (purchaseReturnTemplateRecord == null) {
@@ -40,8 +40,8 @@ exports.viewPurchaseReturnTemplate = async (req, res) => {
       };
       response.success_message(obj, res);
     }
-    else{
-        response.success_message(purchaseReturnTemplateRecord, res)
+    else {
+      response.success_message(purchaseReturnTemplateRecord, res)
     }
   } catch (error) {
     response.error_message(error.message, res);

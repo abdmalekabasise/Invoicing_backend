@@ -8,10 +8,13 @@ const taxModel = require("../../tax/models/tax.model");
 const bankModel = require("../../bank_settings/models/bankSettings.model");
 const roleModel = require("../../role/models/roles.model");
 const signatureModel = require("../../signature/models/signature.model");
+const verify = require("../../../verify.token");
 
 exports.customerList = async (req, res) => {
+
+  const authUser = verify.verify_token(req.headers.token).details;
   try {
-    const customersRec = await customerModel.find({ isDeleted: false , status: "Active"});
+    const customersRec = await customerModel.find({ isDeleted: false, status: "Active", userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId });
     response.success_message(customersRec, res);
   } catch (error) {
     response.error_message(error.message, res);
@@ -19,8 +22,9 @@ exports.customerList = async (req, res) => {
 };
 
 exports.vendorList = async (req, res) => {
+  const authUser = verify.verify_token(req.headers.token).details;
   try {
-    const vendorRecords = await vendorModel.find({ isDeleted: false });
+    const vendorRecords = await vendorModel.find({ isDeleted: false, user_id: authUser.role === "Super Admin" ? authUser.id : authUser.userId });
     response.success_message(vendorRecords, res);
   } catch (error) {
     response.error_message(error.message, res);
@@ -28,8 +32,9 @@ exports.vendorList = async (req, res) => {
 };
 
 exports.categoryList = async (req, res) => {
+  const authUser = verify.verify_token(req.headers.token).details;
   try {
-    const categoryRecords = await categoryModel.find({ isDeleted: false });
+    const categoryRecords = await categoryModel.find({ isDeleted: false, user_id: authUser.role === "Super Admin" ? authUser.id : authUser.userId });
     response.success_message(categoryRecords, res);
   } catch (error) {
     response.error_message(error.message, res);
@@ -37,8 +42,9 @@ exports.categoryList = async (req, res) => {
 };
 
 exports.unitList = async (req, res) => {
+  const authUser = verify.verify_token(req.headers.token).details;
   try {
-    const unitRecords = await unitModel.find({ isDeleted: false });
+    const unitRecords = await unitModel.find({ isDeleted: false, user_id: authUser.role === "Super Admin" ? authUser.id : authUser.userId });
     response.success_message(unitRecords, res);
   } catch (error) {
     response.error_message(error.message, res);
@@ -46,9 +52,10 @@ exports.unitList = async (req, res) => {
 };
 
 exports.productList = async (req, res) => {
+  const authUser = verify.verify_token(req.headers.token).details;
   try {
     const productRecords = await productModel
-      .find({ isDeleted: false })
+      .find({ isDeleted: false, userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId })
       .populate("category")
       .populate("units")
       .populate("tax");
@@ -59,8 +66,9 @@ exports.productList = async (req, res) => {
 };
 
 exports.taxList = async (req, res) => {
+  const authUser = verify.verify_token(req.headers.token).details;
   try {
-    const TaxRecords = await taxModel.find({ status: true,isDeleted:false });
+    const TaxRecords = await taxModel.find({ status: true, isDeleted: false, userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId });
     response.success_message(TaxRecords, res);
   } catch (error) {
     response.error_message(error.message, res);
@@ -68,8 +76,9 @@ exports.taxList = async (req, res) => {
 };
 
 exports.bankList = async (req, res) => {
+  const authUser = verify.verify_token(req.headers.token).details;
   try {
-    const bankRecords = await bankModel.find({ isDeleted: false });
+    const bankRecords = await bankModel.find({ isDeleted: false, userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId });
     response.success_message(bankRecords, res);
   } catch (error) {
     response.error_message(error.message, res);
@@ -77,8 +86,9 @@ exports.bankList = async (req, res) => {
 };
 
 exports.roleList = async (req, res) => {
+  const authUser = verify.verify_token(req.headers.token).details;
   try {
-    const roleRecords = await roleModel.find({ isDeleted: false });
+    const roleRecords = await roleModel.find({ isDeleted: false, userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId });
     response.success_message(roleRecords, res);
   } catch (error) {
     response.error_message(error.message, res);
@@ -86,8 +96,9 @@ exports.roleList = async (req, res) => {
 };
 
 exports.signatureList = async (req, res) => {
+  const authUser = verify.verify_token(req.headers.token).details;
   try {
-    const signatureRecords = await signatureModel.find({ isDeleted: false , status: true }).lean();
+    const signatureRecords = await signatureModel.find({ isDeleted: false, status: true, userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId }).lean();
     const modifiedSignatureList = signatureRecords.map(signature => ({
       ...signature,
       value: signature._id,

@@ -63,6 +63,7 @@ exports.login = async (req, res) => {
           {
             id: user._id,
             role: user.role,
+            userId: user.role === "Super Admin" ? user._id : user.userId,
             email: req.body.email,
             password: req.body.password,
           },
@@ -165,7 +166,7 @@ exports.login = async (req, res) => {
     data = { message: err.message };
     response.error_message(data, res);
   }
-}; 
+};
 
 exports.forgot_password = async (req, res) => {
   authModel.findOne({ email: req.body.email }, async function (err, user) {
@@ -194,99 +195,99 @@ exports.forgot_password = async (req, res) => {
 
         let mailres;
         //emailSettings Null Start
-        if(emailSettings!=null){
+        if (emailSettings != null) {
           const transporters = await createTransporters();
           const nodeTransporter = transporters.nodeTransporter;
           const smtpTransporter = transporters.smtpTransporter;
-  
-        if (emailSettings.provider_type === "NODE") {
-          mailres = await nodeTransporter.sendMail(
-            {
-              from: `${emailSettings.nodeFromName} <${emailSettings.nodeFromEmail}>`,
-              to: req.body.email,
-              subject: subject,
-              html: html,
-            },
-            function (err, mailres) {
-              if (err) {
-                response.validation_error_message(
-                  { message: "Failed to sent" },
-                  res
-                );
-              } else {
-                var milliseconds = new Date().getTime() + 1 * 60 * 60 * 1000;
-                var threehours = new Date(milliseconds);
 
-                authModel.findByIdAndUpdate(
-                  { _id: user._id },
-                  { pswd_reset_at: threehours },
-                  function (err, users) {
-                    if (err) {
-                      data = { message: err.message };
-                      response.validation_error_message(data, res);
-                    } else {
-                      // if (users) sfsd = sdfd;
-                    }
-                  }
-                );
-
-                if (mailres) {
-                  console.log("mailres :", mailres);
-                  response.success_message(
-                    { message: "Mail sent successfully!" },
+          if (emailSettings.provider_type === "NODE") {
+            mailres = await nodeTransporter.sendMail(
+              {
+                from: `${emailSettings.nodeFromName} <${emailSettings.nodeFromEmail}>`,
+                to: req.body.email,
+                subject: subject,
+                html: html,
+              },
+              function (err, mailres) {
+                if (err) {
+                  response.validation_error_message(
+                    { message: "Failed to sent" },
                     res
                   );
+                } else {
+                  var milliseconds = new Date().getTime() + 1 * 60 * 60 * 1000;
+                  var threehours = new Date(milliseconds);
+
+                  authModel.findByIdAndUpdate(
+                    { _id: user._id },
+                    { pswd_reset_at: threehours },
+                    function (err, users) {
+                      if (err) {
+                        data = { message: err.message };
+                        response.validation_error_message(data, res);
+                      } else {
+                        // if (users) sfsd = sdfd;
+                      }
+                    }
+                  );
+
+                  if (mailres) {
+                    console.log("mailres :", mailres);
+                    response.success_message(
+                      { message: "Mail sent successfully!" },
+                      res
+                    );
+                  }
                 }
               }
-            }
-          );
+            );
+          } else {
+            mailres = await smtpTransporter.sendMail(
+              {
+                from: `${emailSettings.smtpFromName} <${emailSettings.smtpFromEmail}>`,
+                to: req.body.email,
+                subject: subject,
+                html: html,
+              },
+              function (err, mailres) {
+                if (err) {
+                  response.validation_error_message(
+                    { message: "Failed to sent" },
+                    res
+                  );
+                } else {
+                  var milliseconds = new Date().getTime() + 1 * 60 * 60 * 1000;
+                  var threehours = new Date(milliseconds);
+
+                  authModel.findByIdAndUpdate(
+                    { _id: user._id },
+                    { pswd_reset_at: threehours },
+                    function (err, users) {
+                      if (err) {
+                        data = { message: err.message };
+                        response.validation_error_message(data, res);
+                      } else {
+                        // if (users) sfsd = sdfd;
+                      }
+                    }
+                  );
+
+                  if (mailres) {
+                    response.success_message(
+                      { message: "Mail sent successfully!" },
+                      res
+                    );
+                  }
+                }
+              }
+            );
+          }
         } else {
-          mailres = await smtpTransporter.sendMail(
-            {
-              from: `${emailSettings.smtpFromName} <${emailSettings.smtpFromEmail}>`,
-              to: req.body.email,
-              subject: subject,
-              html: html,
-            },
-            function (err, mailres) {
-              if (err) {
-                response.validation_error_message(
-                  { message: "Failed to sent" },
-                  res
-                );
-              } else {
-                var milliseconds = new Date().getTime() + 1 * 60 * 60 * 1000;
-                var threehours = new Date(milliseconds);
+          data = { message: "From email is empty!" };
+          response.validation_error_message(data, res);
 
-                authModel.findByIdAndUpdate(
-                  { _id: user._id },
-                  { pswd_reset_at: threehours },
-                  function (err, users) {
-                    if (err) {
-                      data = { message: err.message };
-                      response.validation_error_message(data, res);
-                    } else {
-                      // if (users) sfsd = sdfd;
-                    }
-                  }
-                );
-
-                if (mailres) {
-                  response.success_message(
-                    { message: "Mail sent successfully!" },
-                    res
-                  );
-                }
-              }
-            }
-          );
         }
-      }else{
-        data = { message: "From email is empty!" };
-        response.validation_error_message(data, res);
-  
-      }
-      //emailSettings Null end
+        //emailSettings Null end
 
       } else {
         data = { message: "Invalid Email" };

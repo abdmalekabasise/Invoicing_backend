@@ -16,9 +16,8 @@ exports.create = async (req, res) => {
     var request = req.body;
     const auth_user = verify.verify_token(req.headers.token).details;
     let query = {
-      userId: auth_user.id,
+      userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
       isDeleted: false,
-      $or: [{ email: request.email }, { phone: request.phone }],
     };
     const customerrec = await customersModel.findOne(query);
 
@@ -67,7 +66,7 @@ exports.create = async (req, res) => {
             : " ",
           IFSC: request.bankDetails ? request.bankDetails.IFSC : " ",
         },
-        userId: auth_user.id,
+        userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
       };
       const customerrec = await customersModel.create(val);
       if (customerrec) {
@@ -85,6 +84,8 @@ exports.create = async (req, res) => {
 };
 
 exports.list = async (req, res) => {
+  const auth_user = verify.verify_token(req.headers.token).details;
+  console.log(auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId)
   try {
     const request = req.query;
     let query = [
@@ -99,6 +100,7 @@ exports.list = async (req, res) => {
       {
         $match: {
           isDeleted: false,
+          userId: mongoose.Types.ObjectId(auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId)
         },
       },
       {
@@ -188,9 +190,10 @@ exports.list = async (req, res) => {
 };
 
 exports.view = async (req, res) => {
+  const auth_user = verify.verify_token(req.headers.token).details;
   try {
     const customerinfo = await customersModel
-      .findOne({ _id: req.params.id })
+      .findOne({ _id: req.params.id, userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId })
       .select("-__v -updated_at")
       .lean();
     if (customerinfo) {
@@ -275,7 +278,7 @@ exports.update = async (req, res) => {
             : " ",
           IFSC: request.bankDetails ? request.bankDetails.IFSC : " ",
         },
-        userId: auth_user.id,
+        userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId
       },
     };
 
@@ -306,6 +309,7 @@ exports.update = async (req, res) => {
 };
 
 exports.delete = async (req, res) => {
+  const auth_user = verify.verify_token(req.headers.token).details;
   try {
     const customerRec = await customersModel.findOneAndUpdate(
       { _id: req.body._id },
@@ -323,12 +327,14 @@ exports.delete = async (req, res) => {
 };
 
 exports.activateCustomer = async (req, res) => {
+  const auth_user = verify.verify_token(req.headers.token).details;
   try {
     const customerRec = await customersModel.findByIdAndUpdate(
       req.body._id,
       {
         $set: {
           status: "Active",
+          userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId
         },
       },
       {
@@ -345,12 +351,14 @@ exports.activateCustomer = async (req, res) => {
   }
 };
 exports.deactivateCustomer = async (req, res) => {
+  const auth_user = verify.verify_token(req.headers.token).details;
   try {
     const customerRec = await customersModel.findByIdAndUpdate(
       req.body._id,
       {
         $set: {
           status: "Deactive",
+          userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId
         },
       },
       {
@@ -367,6 +375,7 @@ exports.deactivateCustomer = async (req, res) => {
   }
 };
 exports.CustomerDetails = async (req, res) => {
+  const auth_user = verify.verify_token(req.headers.token).details;
   try {
     const request = req.query;
     let skip = request.skip || null;
@@ -387,6 +396,7 @@ exports.CustomerDetails = async (req, res) => {
       {
         $match: {
           _id: mongoose.Types.ObjectId(request._id),
+          userId: mongoose.Types.ObjectId(auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId)
         },
       },
       {
@@ -413,6 +423,7 @@ exports.CustomerDetails = async (req, res) => {
                 $match: {
                   customerId: mongoose.Types.ObjectId(request._id),
                   isDeleted: false,
+                  userId: mongoose.Types.ObjectId(auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId)
                 },
               },
               {
@@ -433,6 +444,7 @@ exports.CustomerDetails = async (req, res) => {
                   customerId: mongoose.Types.ObjectId(request._id),
                   status: "PAID",
                   isDeleted: false,
+                  userId: mongoose.Types.ObjectId(auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId)
                 },
               },
               {
@@ -454,6 +466,7 @@ exports.CustomerDetails = async (req, res) => {
                   customerId: mongoose.Types.ObjectId(request._id),
                   status: { $nin: ["PAID", "DRAFTED"] },
                   isDeleted: false,
+                  userId: mongoose.Types.ObjectId(auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId)
                 },
               },
               {
@@ -476,6 +489,7 @@ exports.CustomerDetails = async (req, res) => {
                   dueDate: { $gt: moment(new Date()).format("DD-MM-YYYY") },
                   status: "DRAFTED",
                   isDeleted: false,
+                  userId: mongoose.Types.ObjectId(auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId)
                 },
               },
               {
@@ -496,6 +510,7 @@ exports.CustomerDetails = async (req, res) => {
                   customerId: mongoose.Types.ObjectId(request._id),
                   status: "CANCELLED",
                   isDeleted: false,
+                  userId: mongoose.Types.ObjectId(auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId)
                 },
               },
               {
@@ -517,6 +532,7 @@ exports.CustomerDetails = async (req, res) => {
                   status: { $nin: ["PAID", "PARTIALLY_PAID"] },
                   dueDate: { $lt: moment(new Date()).format("DD-MM-YYYY") },
                   isDeleted: false,
+                  userId: mongoose.Types.ObjectId(auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId)
                 },
               },
               {
@@ -546,6 +562,7 @@ exports.CustomerDetails = async (req, res) => {
           {
             $match: {
               invoiceId: mongoose.Types.ObjectId(item._id),
+              userId: mongoose.Types.ObjectId(auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId)
             },
           },
           {

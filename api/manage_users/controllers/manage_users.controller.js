@@ -131,12 +131,12 @@ exports.create = async (req, res) => {
       orQuery.push({ mobileNumber: request.mobileNumber });
     }
     const userRec = await usersModel.findOne({
-      userId: auth_user.id,
       isDeleted: false,
-      $or: orQuery,
+      email: request.email,
     });
     if (userRec) {
-      data = { message: ["Email or Phone Number Already Exists.."] };
+      console.log("here");
+      data = { message: ["Email Already Exists.."] };
       response.validation_error_message(data, res);
     } else {
       const hashedPassword = bcrypt.hashSync(req.body.password, 8);
@@ -160,7 +160,7 @@ exports.create = async (req, res) => {
           state: request.state,
           postalcode: request.postalcode,
         },
-        userId: auth_user.id,
+        userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
         created_at: new Date(),
       });
       response.success_message({ message: "user added successfully" }, res);
@@ -226,7 +226,7 @@ exports.update = async (req, res) => {
         state: request.state,
         postalcode: request.postalcode,
       },
-      userId: auth_user.id,
+      userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
       created_at: new Date(),
     },
   };
@@ -275,8 +275,9 @@ exports.update = async (req, res) => {
 //View users
 
 exports.view = function (req, res) {
+  const auth_user = verify.verify_token(req.headers.token).details;
   usersModel
-    .findOne({ _id: req.params.id })
+    .findOne({ _id: req.params.id, userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId })
     .select("-__v -updated_at")
     .lean()
     .exec(function (err, manageuserinfo) {
@@ -304,10 +305,13 @@ exports.view = function (req, res) {
 };
 
 exports.list = async (req, res) => {
+  const auth_user = verify.verify_token(req.headers.token).details;
+  console.log(auth_user);
   try {
     const request = req.query;
     let filter = {
       isDeleted: false,
+      userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
     };
     if (request.user) {
       let splittedVal = request.user.split(",").map((id) => {
@@ -345,9 +349,10 @@ exports.list = async (req, res) => {
 };
 
 exports.softDelete = async (req, res) => {
+  const auth_user = verify.verify_token(req.headers.token).details;
   try {
     const user_model = await usersModel.findOneAndUpdate(
-      { _id: req.params.id, isDeleted: { $ne: true } },
+      { _id: req.params.id, isDeleted: { $ne: true }, userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId },
       { $set: { isDeleted: true } }
     );
     data = { message: "Deleted Successfully", deletedCount: 1 };
@@ -361,8 +366,9 @@ exports.softDelete = async (req, res) => {
 //delete image
 
 exports.delete_image = function (req, res) {
+  const auth_user = verify.verify_token(req.headers.token).details;
   manageUsersModel.updateOne(
-    { _id: req.body.id },
+    { _id: req.body.id, userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId },
     { $pull: { images: { id: req.body.image_id } } },
     function (err, results) {
       if (err) {
