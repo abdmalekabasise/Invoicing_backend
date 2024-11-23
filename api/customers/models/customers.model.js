@@ -38,11 +38,11 @@ const customers = new Schema(
     },
     email: {
       type: Schema.Types.String,
-      required: true,
+      required: false,
     },
     phone: {
       type: Schema.Types.String,
-      required: true,
+      required: false,
     },
     // currency: {
     //   type: Schema.Types.String,
@@ -64,6 +64,11 @@ const customers = new Schema(
       type: Schema.Types.String,
       required: true,
       default: "Active",
+    },
+    mat_fisc: {
+      type: Schema.Types.String,
+      required: false,
+
     },
     billingAddress: {
       name: {

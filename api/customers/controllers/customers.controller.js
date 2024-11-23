@@ -19,64 +19,60 @@ exports.create = async (req, res) => {
       userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
       isDeleted: false,
     };
-    const customerrec = await customersModel.findOne(query);
 
-    if (customerrec) {
-      data = { message: "Customer Email or Phone Alredy Exists.." };
-      response.validation_error_message(data, res);
-    } else {
-      let filePath = "";
-      if (req.file) {
-        filePath = req.file.path;
-      }
-      const val = {
-        name: request.name,
-        phone: request.phone,
-        email: request.email,
-        // currency: request.currency,
-        website: request.website,
-        notes: request.notes,
-        image: filePath,
-        billingAddress: {
-          name: request.billingAddress?.name || "",
-          addressLine1: request.billingAddress?.addressLine1 || "",
-          addressLine2: request.billingAddress?.addressLine2 || "",
-          city: request.billingAddress?.city || "",
-          state: request.billingAddress?.state || "",
-          pincode: request.billingAddress?.pincode || "",
-          country: request.billingAddress?.country || "",
-        },
-        shippingAddress: {
-          name: request.shippingAddress?.name || "",
-          addressLine1: request.shippingAddress?.addressLine1 || "",
-          addressLine2: request.shippingAddress?.addressLine2 || "",
-          city: request.shippingAddress?.city || "",
-          state: request.shippingAddress?.state || "",
-          pincode: request.shippingAddress?.pincode || "",
-          country: request.shippingAddress?.country || "",
-        },
-        bankDetails: {
-          bankName: request.bankDetails ? request.bankDetails.bankName : " ",
-          branch: request.bankDetails ? request.bankDetails.branch : " ",
-          accountHolderName: request.bankDetails
-            ? request.bankDetails.accountHolderName
-            : " ",
-          accountNumber: request.bankDetails
-            ? request.bankDetails.accountNumber
-            : " ",
-          IFSC: request.bankDetails ? request.bankDetails.IFSC : " ",
-        },
-        userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
-      };
-      const customerrec = await customersModel.create(val);
-      if (customerrec) {
-        data = {
-          message: "Customer Created successfully.",
-          auth: true,
-        };
-        response.success_message(data, res);
-      }
+    let filePath = "";
+    if (req.file) {
+      filePath = req.file.path;
     }
+    const val = {
+      name: request.name,
+      phone: request.phone,
+      email: request.email,
+      // currency: request.currency,
+      website: request.website,
+      notes: request.notes,
+      image: filePath,
+      billingAddress: {
+        name: request.billingAddress?.name || "",
+        addressLine1: request.billingAddress?.addressLine1 || "",
+        addressLine2: request.billingAddress?.addressLine2 || "",
+        city: request.billingAddress?.city || "",
+        state: request.billingAddress?.state || "",
+        pincode: request.billingAddress?.pincode || "",
+        country: request.billingAddress?.country || "",
+      },
+      shippingAddress: {
+        name: request.shippingAddress?.name || "",
+        addressLine1: request.shippingAddress?.addressLine1 || "",
+        addressLine2: request.shippingAddress?.addressLine2 || "",
+        city: request.shippingAddress?.city || "",
+        state: request.shippingAddress?.state || "",
+        pincode: request.shippingAddress?.pincode || "",
+        country: request.shippingAddress?.country || "",
+      },
+      bankDetails: {
+        bankName: request.bankDetails ? request.bankDetails.bankName : " ",
+        branch: request.bankDetails ? request.bankDetails.branch : " ",
+        accountHolderName: request.bankDetails
+          ? request.bankDetails.accountHolderName
+          : " ",
+        accountNumber: request.bankDetails
+          ? request.bankDetails.accountNumber
+          : " ",
+        IFSC: request.bankDetails ? request.bankDetails.IFSC : " ",
+      },
+      userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
+      mat_fisc: request.mat_fisc
+    };
+    const customerrec = await customersModel.create(val);
+    if (customerrec) {
+      data = {
+        message: "Customer Created successfully.",
+        auth: true,
+      };
+      response.success_message(data, res);
+    }
+
   } catch (error) {
     console.log("error :", error);
     response.error_message(error.message, res);
@@ -278,7 +274,8 @@ exports.update = async (req, res) => {
             : " ",
           IFSC: request.bankDetails ? request.bankDetails.IFSC : " ",
         },
-        userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId
+        userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
+        mat_fisc: request.mat_fisc
       },
     };
 
@@ -288,20 +285,16 @@ exports.update = async (req, res) => {
       _id: { $ne: req.params.id },
     });
 
-    data = { message: "Customer Email or Phone Already Exists.." };
 
-    if (dublicaterec) {
-      response.validation_error_message(data, res);
-    } else {
-      const cus = await customersModel.findByIdAndUpdate(
-        req.params.id,
-        newvalues
-      );
-      if (cus) {
-        data = { message: "Customer updated successfully." };
-        response.success_message(data, res);
-      }
+    const cus = await customersModel.findByIdAndUpdate(
+      req.params.id,
+      newvalues
+    );
+    if (cus) {
+      data = { message: "Customer updated successfully." };
+      response.success_message(data, res);
     }
+
   } catch (error) {
     console.log("Error:", error);
     response.error_message(error.message, res);
