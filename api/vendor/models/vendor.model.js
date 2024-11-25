@@ -4,9 +4,14 @@ const Schema = mongoose.Schema;
 
 let vendor = new Schema({
   vendor_name: { type: String, required: true },
-  vendor_email: { type: String, required: true },
-  vendor_phone: { type: String, required: true },
+  vendor_email: { type: String, required: false },
+  vendor_phone: { type: String, required: false },
   balance: { type: Number, min: 0, required: false },
+  mat_fisc: {
+    type: Schema.Types.String,
+    required: false,
+
+  },
   balanceType: {
     type: String,
     required: false,

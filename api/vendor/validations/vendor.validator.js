@@ -3,8 +3,7 @@ const response = require("../../../response");
 
 exports.create = [
   body("vendor_name").trim().notEmpty().withMessage("is required"),
-  body("vendor_email").trim().notEmpty().withMessage("is required").isEmail(),
-  body("vendor_phone").trim().notEmpty().withMessage("is required").isInt(),
+
   body("balance")
     .trim()
     .optional()

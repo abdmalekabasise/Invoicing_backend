@@ -4,20 +4,8 @@ const customersModel = require("../models/customers.model");
 
 exports.create = [
   body("name").trim().notEmpty().withMessage("is required"),
-  body("email").custom(async (value) => {
-    const existingUser = await customersModel.findOne({ email: value });
-    if (existingUser) {
-      throw new Error("Email already exists");
-    }
-    return true;
-  }),
-  body("phone").custom(async (value) => {
-    const existingUser = await customersModel.findOne({ phone: value });
-    if (existingUser) {
-      throw new Error("Phone number already exists");
-    }
-    return true;
-  }),
+
+
   // body("currency").trim().trim().optional(),
   body("website").trim().trim().optional(),
   body("notes").trim().optional(),
@@ -25,7 +13,7 @@ exports.create = [
 
   body("billingAddress.name").trim().optional(),
   body("billingAddress.addressLine1")
-  .trim().optional(),
+    .trim().optional(),
   body("billingAddress.addressLine2").trim().optional(),
   body("billingAddress.city").trim().optional(),
   body("billingAddress.state").trim().optional(),
@@ -34,7 +22,7 @@ exports.create = [
 
   body("shippingAddress.name").trim().optional(),
   body("shippingAddress.addressLine1")
-  .trim().optional(),
+    .trim().optional(),
   body("shippingAddress.addressLine2").trim().optional(),
   body("shippingAddress.city").trim().optional(),
   body("shippingAddress.state").trim().optional(),
@@ -47,7 +35,7 @@ exports.create = [
   body("bankDetails.accountNumber").trim().optional(),
   body("bankDetails.IFSC").trim().optional(),
   body("image")
-  .optional(),
+    .optional(),
   // .custom((value, { req }) => {
   //   if (!req.file) {
   //     return Promise.reject("is required");
@@ -74,8 +62,7 @@ exports.create = [
 
 exports.update = [
   body("name").trim().notEmpty().withMessage("is required"),
-  body("email").trim().notEmpty().withMessage("is required"),
-  body("phone").trim().notEmpty().withMessage("is required"),
+
   // body("currency").trim().optional(),
   body("website").trim().optional(),
   body("notes").trim().optional(),
@@ -83,7 +70,7 @@ exports.update = [
 
   body("billingAddress.name").trim().optional(),
   body("billingAddress.addressLine1")
-  .trim().optional(),
+    .trim().optional(),
   body("billingAddress.addressLine2").trim().optional(),
   body("billingAddress.city").trim().optional(),
   body("billingAddress.state").trim().optional(),
@@ -92,7 +79,7 @@ exports.update = [
 
   body("shippingAddress.name").trim().optional(),
   body("shippingAddress.addressLine1")
-  .trim().optional(),
+    .trim().optional(),
   body("shippingAddress.addressLine2").trim().optional(),
   body("shippingAddress.city").trim().optional(),
   body("shippingAddress.state").trim().optional(),
@@ -105,7 +92,7 @@ exports.update = [
   body("bankDetails.accountNumber").trim().optional(),
   body("bankDetails.IFSC").trim().optional(),
   body("image")
-  .optional(),
+    .optional(),
   // .custom(async (value, { req }) => {
   //   const imageRec = await customersModel.findById(req.params.id);
   //   if ((imageRec == null || !imageRec.image) && !req.file) {

@@ -4,6 +4,7 @@ const verify = require("../../../verify.token");
 const fs = require("fs");
 const path = require("path");
 const mongoose = require("mongoose");
+const { isNumber } = require("util");
 var data;
 
 exports.create = async (req, res) => {
@@ -18,7 +19,7 @@ exports.create = async (req, res) => {
     const name = request.name.trim().toLowerCase();
     const productrec = await productsModel.findOne({
       name: { $regex: new RegExp(`^${name}$`, "i") },
-      userId: auth_user.id,
+      userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
       isDeleted: false,
     });
     if (productrec) {
@@ -31,12 +32,12 @@ exports.create = async (req, res) => {
         sku: request.sku,
         category: request.category,
         sellingPrice: request.sellingPrice,
-        purchasePrice: request.purchasePrice,
+        purchasePrice: !isNaN(request.purchasePrice) ? request.purchasePrice : 0,
         discountValue: request.discountValue,
         units: request.units,
         discountType: request.discountType,
         barcode: request.barcode,
-        alertQuantity: request.alertQuantity,
+        alertQuantity: 1,
         tax: request.tax ? request.tax : null,
         productDescription: request.productDescription,
         userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
@@ -158,9 +159,9 @@ exports.update = async (req, res) => {
         name: request.name,
         sku: request.sku,
         category: request.category,
-        sellingPrice: request.sellingPrice,
-        purchasePrice: request.purchasePrice,
-        discountValue: request.discountValue,
+        sellingPrice: parseInt(request.sellingPrice),
+        purchasePrice: !isNaN(request.purchasePrice) ? request.purchasePrice : 0,
+        discountValue: parseInt(request.discountValue),
         units: request.units,
         discountType: request.discountType,
         barcode: request.barcode,
@@ -177,7 +178,7 @@ exports.update = async (req, res) => {
     const name = request.name.trim().toLowerCase();
     const dublicaterec = await productsModel.findOne({
       name: { $regex: new RegExp(`^${name}$`, "i") },
-      userId: auth_user.id,
+      userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
       _id: { $ne: req.params.id },
     });
 

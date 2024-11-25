@@ -23,6 +23,7 @@ exports.create = async (req, res) => {
         user_id: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
         isDeleted: false,
         created_at: new Date(),
+        mat_fisc: request.mat_fisc
       });
       if (vendorrec) {
         data = {
@@ -147,6 +148,7 @@ exports.update = async (req, res) => {
         vendor_phone: request.vendor_phone,
         balance: request.balance,
         balanceType: request.balanceType,
+        mat_fisc: request.mat_fisc,
         user_id: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId
       },
     };
