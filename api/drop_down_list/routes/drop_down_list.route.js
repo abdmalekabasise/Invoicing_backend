@@ -8,6 +8,8 @@ router.get("/category", dropDownController.categoryList);
 router.get("/unit", dropDownController.unitList);
 router.get("/product", dropDownController.productList);
 router.get("/tax", dropDownController.taxList);
+router.get("/other-tax", dropDownController.othertaxList);
+
 router.get("/bank", dropDownController.bankList);
 router.get("/role", dropDownController.roleList);
 router.get("/signature", dropDownController.signatureList);

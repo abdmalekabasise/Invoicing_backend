@@ -62,9 +62,7 @@ exports.create = async (req, res) => {
           );
         }
       }
-      if (minQuanProducts.length > 0) {
-        response.validation_error_message({ message: minQuanProducts }, res);
-      } else {
+ 
         let renewalDates = [];
         if (request.isRecurring) {
           renewalDates = commonDate.calculateRenewalDates(
@@ -87,6 +85,8 @@ exports.create = async (req, res) => {
             referenceNo: request.referenceNo,
             payment_method: request.payment_method,
             items: request.items,
+            selectedOtherTaxes: request.selectedOtherTaxes,
+            currency:request.currency,
             notes: request.notes,
             bank: bankObjectId,
             termsAndCondition: request.termsAndCondition,
@@ -122,8 +122,8 @@ exports.create = async (req, res) => {
                     productId: item.productId,
                   });
                   if (inventoryRecord) {
-                    let updatedQty =
-                      inventoryRecord.quantity - parseInt(item.quantity);
+                    let updatedQty = Math.max(0, inventoryRecord.quantity - parseInt(item.quantity));
+
                     const updatedRec = await inventoryModel.findByIdAndUpdate(
                       inventoryRecord._id,
                       {
@@ -179,7 +179,7 @@ exports.create = async (req, res) => {
             }
           }
         );
-      }
+      
     } catch (err) {
       console.log("error :", err);
       data = { message: err.message };
