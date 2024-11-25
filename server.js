@@ -165,6 +165,9 @@ app.use("/units", jwtmiddleware.jwtauth, units);
 const tax = require("./api/tax/routes/tax.route");
 app.use("/tax", jwtmiddleware.jwtauth, tax);
 
+const othertax = require("./api/tax2/routes/tax.route");
+app.use("/othertax", jwtmiddleware.jwtauth, othertax);
+
 const currency = require("./api/currency/routes/currency.route");
 app.use("/currency", currency);
 

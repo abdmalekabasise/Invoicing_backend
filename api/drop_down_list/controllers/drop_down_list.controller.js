@@ -5,6 +5,8 @@ const categoryModel = require("../../category/models/category.model");
 const unitModel = require("../../units/models/unit_type.model");
 const productModel = require("../../products/models/products.model");
 const taxModel = require("../../tax/models/tax.model");
+const othertaxModel = require("../../tax2/models/othertax.model");
+
 const bankModel = require("../../bank_settings/models/bankSettings.model");
 const roleModel = require("../../role/models/roles.model");
 const signatureModel = require("../../signature/models/signature.model");
@@ -69,6 +71,16 @@ exports.taxList = async (req, res) => {
   const authUser = verify.verify_token(req.headers.token).details;
   try {
     const TaxRecords = await taxModel.find({ status: true, isDeleted: false, userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId });
+    response.success_message(TaxRecords, res);
+  } catch (error) {
+    response.error_message(error.message, res);
+  }
+};
+
+exports.othertaxList = async (req, res) => {
+  const authUser = verify.verify_token(req.headers.token).details;
+  try {
+    const TaxRecords = await othertaxModel.find({ status: true, isDeleted: false, userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId });
     response.success_message(TaxRecords, res);
   } catch (error) {
     response.error_message(error.message, res);
