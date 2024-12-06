@@ -35,6 +35,10 @@ exports.create = async (req, res) => {
       //gst: request.gst,
       //document_title: request.document_title,
       items: request.items,
+      selectedOtherTaxes: request.selectedOtherTaxes,
+      selectedTaxRates: request.selectedTaxRates,
+
+      currency:request.currency,
       discountType: request.discountType,
       discount: request.discount,
       tax: request.tax,
@@ -193,6 +197,10 @@ exports.update = async (req, res) => {
       //gst: request.gst,
       //document_title: request.document_title,
       items: request.items,
+      selectedOtherTaxes: request.selectedOtherTaxes,
+      selectedTaxRates: request.selectedTaxRates,
+
+      currency:request.currency,
       discountType: request.discountType,
       discount: request.discount,
       tax: request.tax,

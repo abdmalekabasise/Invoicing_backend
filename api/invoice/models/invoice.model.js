@@ -55,6 +55,10 @@ let invoice = new Schema(
       type: Schema.Types.Array,
       required: true,
     },
+    selectedTaxRates: {
+      type: Schema.Types.Array,
+      required: true,
+    },
     selectedOtherTaxes: { type: [Schema.Types.Boolean], required: true },
     currency: {
       type: Schema.Types.String,

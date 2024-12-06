@@ -258,6 +258,7 @@ exports.update = async (req, res) => {
 
 exports.list = async (req, res) => {
   try {
+    const authUser = verify.verify_token(req.headers.token).details;
     const request = req.query;
     let filter = {
       isDeleted: false,

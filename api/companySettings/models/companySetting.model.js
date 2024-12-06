@@ -15,6 +15,10 @@ const companySettingSchema = new mongoose.Schema(
       type: Schema.Types.String,
       required: true,
     },
+    mat_fisc: {
+      type: Schema.Types.String,
+      required: true,
+    },
     addressLine1: {
       type: Schema.Types.String,
       required: true,

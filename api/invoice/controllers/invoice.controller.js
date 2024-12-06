@@ -86,6 +86,8 @@ exports.create = async (req, res) => {
             payment_method: request.payment_method,
             items: request.items,
             selectedOtherTaxes: request.selectedOtherTaxes,
+            selectedTaxRates: request.selectedTaxRates,
+
             currency:request.currency,
             notes: request.notes,
             bank: bankObjectId,
@@ -270,9 +272,7 @@ exports.list = async function (req, res) {
     }
     if (req.query.status == "DRAFTED") {
       filter.status = "DRAFTED";
-      filter.dueDate = {
-        $gt: new Date(),
-      };
+    
     }
     if (
       req.query.status == "PAID" ||
@@ -320,9 +320,7 @@ exports.list = async function (req, res) {
       let status = ["PAID", "PARTIALLY_PAID", "SENT"];
       for (const item of result.docs) {
         if (Object.keys(item).length > 0) {
-          if (item.dueDate < new Date() && !status.includes(item.status)) {
-            item.status = "OVERDUE";
-          }
+          
         }
         const paymentDetails = await paymentModel.aggregate([
           {
@@ -796,6 +794,9 @@ exports.update = async (req, res) => {
           invoiceNumber: request.invoiceNumber,
           referenceNo: request.referenceNo,
           payment_method: request.payment_method,
+          currency:request.currency,
+          selectedOtherTaxes: request.selectedOtherTaxes,
+          selectedTaxRates: request.selectedTaxRates,
           items: request.items,
           notes: request.notes,
           bank: bankObjectId,

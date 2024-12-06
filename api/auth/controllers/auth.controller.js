@@ -115,8 +115,11 @@ exports.login = async (req, res) => {
             image: "",
           };
         }
+        var filter = {};
 
-        companyDetails = await companySettingModel.findOne().lean();
+        filter.userId = user.role === "Super Admin" ? user.id : user.userId
+
+        companyDetails = await companySettingModel.findOne(filter).lean();
 
         if (companyDetails == null) {
           companyDetails = {

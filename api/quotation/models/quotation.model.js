@@ -40,6 +40,15 @@ const quotation = new Schema(
       type: Schema.Types.Array,
       required: true,
     },
+    selectedTaxRates: {
+      type: Schema.Types.Array,
+      required: true,
+    },
+    selectedOtherTaxes: { type: [Schema.Types.Boolean], required: true },
+    currency: {
+      type: Schema.Types.String,
+      required: true,
+    },
     discountType: {
       type: Schema.Types.String,
       required: false,
