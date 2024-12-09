@@ -411,6 +411,132 @@ exports.cardCount = async function (req, res) {
         },
       },
     ]);
+    // New
+
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+    console.log("startOfToday " + startOfToday +"endOfToday "+endOfToday);
+
+    var total_invoice_today = await invoiceModel.aggregate([
+      {
+        $match: {
+          isSalesReturned: false,
+          userId: mongoose.Types.ObjectId(authUser.role === "Super Admin" ? authUser.id : authUser.userId),
+          invoiceDate: { $gte: startOfToday, $lte: endOfToday } // Filter for today's invoices
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          total_sum: { $sum: { $toDouble: "$TotalAmount" } },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const now = new Date();
+    const day = now.getDay(); // 0 (Sunday) to 6 (Saturday)
+    const diffToMonday = (day === 0 ? -6 : 1) - day; // Adjust for Sunday (0) being the last day of the previous week
+    const startOfWeek = new Date(now.setDate(now.getDate() + diffToMonday));
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    // Calculate end of the current week (Sunday)
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    var total_invoice_week = await invoiceModel.aggregate([
+      {
+        $match: {
+          isSalesReturned: false,
+          userId: mongoose.Types.ObjectId(authUser.role === "Super Admin" ? authUser.id : authUser.userId),
+          invoiceDate: { $gte: startOfWeek, $lte: endOfWeek } // Filter for this week
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          total_sum: { $sum: { $toDouble: "$TotalAmount" } },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    // Calculate the start of the month
+const startOfMonth = new Date();
+startOfMonth.setDate(1); // Set to the first day of the month
+startOfMonth.setHours(0, 0, 0, 0); // Set time to start of the day
+
+// Calculate the end of the month
+const endOfMonth = new Date(startOfMonth);
+endOfMonth.setMonth(startOfMonth.getMonth() + 1); // Move to the next month
+endOfMonth.setDate(0); // Set to the last day of the current month
+endOfMonth.setHours(23, 59, 59, 999); // Set time to the end of the day
+
+// Aggregation for total invoices in the current month
+var total_invoice_month = await invoiceModel.aggregate([
+  {
+    $match: {
+      isSalesReturned: false,
+      userId: mongoose.Types.ObjectId(authUser.role === "Super Admin" ? authUser.id : authUser.userId),
+      invoiceDate: { $gte: startOfMonth, $lte: endOfMonth } // Filter for this month
+    },
+  },
+  {
+    $group: {
+      _id: null,
+      total_sum: { $sum: { $toDouble: "$TotalAmount" } },
+      count: { $sum: 1 },
+    },
+  },
+]);
+
+const today = new Date();
+const startOfCurrentYear = new Date(today.getFullYear(), 0, 1);
+const startOfLastYear = new Date(today.getFullYear() - 1, 0, 1);
+const endOfLastYearToToday = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
+console.log(endOfLastYearToToday);
+
+const totalThisYear = await invoiceModel.aggregate([
+  {
+    $match: {
+      isSalesReturned: false,
+      userId: mongoose.Types.ObjectId(authUser.role === "Super Admin" ? authUser.id : authUser.userId),
+      invoiceDate: { $gte: startOfCurrentYear, $lte: today },
+    },
+  },
+  {
+    $group: {
+      _id: null,
+      total_sum: { $sum: { $toDouble: "$TotalAmount" } },
+    },
+  },
+]);
+
+const totalLastYear = await invoiceModel.aggregate([
+  {
+    $match: {
+      isSalesReturned: false,
+      userId: mongoose.Types.ObjectId(authUser.role === "Super Admin" ? authUser.id : authUser.userId),
+      invoiceDate: { $gte: startOfLastYear, $lte: endOfLastYearToToday },
+    },
+  },
+  {
+    $group: {
+      _id: null,
+      total_sum: { $sum: { $toDouble: "$TotalAmount" } },
+    },
+  },
+]);
+
+  // Calculate the difference
+  const totalThisYearAmount = totalThisYear[0]?.total_sum || 0;
+  const totalLastYearAmount = totalLastYear[0]?.total_sum || 0;
+  const difference = totalThisYearAmount - totalLastYearAmount;
+
     var total_outstanding = await invoiceModel.aggregate([
       {
         $match: {
@@ -501,7 +627,11 @@ exports.cardCount = async function (req, res) {
     // ])
     data = {
       total_invoice: total_invoice,
+      total_invoice_today:total_invoice_today,
+      total_invoice_week:total_invoice_week,
       total_outstanding: total_outstanding,
+      difference:difference,
+      total_invoice_month:total_invoice_month,
       total_overdue: total_overdue,
       total_cancelled: total_cancelled,
       total_drafted: total_drafted,

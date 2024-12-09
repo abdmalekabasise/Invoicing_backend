@@ -532,6 +532,9 @@ exports.convertToPurchase = async (req, res) => {
         vendorId: purchaseOrder.vendorId,
         created_at: new Date(),
         updated_at: new Date(),
+        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId
+
+
       });
 
       let data = {
