@@ -31,7 +31,7 @@ app.use(
 
 var port = process.env.PORT || 7002;
 
-if (process.env.NODE_ENV == "development") {
+if (process.env.NODE_ENV == "production") {
   try {
     https
       .createServer(
@@ -77,8 +77,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 const mongooseOptions = { useNewUrlParser: true, useUnifiedTopology: true };
 mongoose.set("strictQuery", true);
-mongoose.connect(
-  `mongodb://${config.database.host}:${config.database.port}/${config.database.db}`,
+mongoose.connect(`mongodb+srv://gamesmalek2:fjVyRDZStzsxWnUR@cluster0.v1rdafh.mongodb.net/kanakku`,
   mongooseOptions,
   (err, response) => {
     if (err) {
