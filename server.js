@@ -31,7 +31,7 @@ app.use(
 
 var port = process.env.PORT || 7002;
 
-if (process.env.NODE_ENV == "production") {
+if (process.env.NODE_ENV == "development") {
   try {
     https
       .createServer(
