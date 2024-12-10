@@ -41,7 +41,7 @@ if (process.env.NODE_ENV == "production") {
         },
         app
       )
-      .listen(port, function () {
+      .listen(port, "0.0.0.0", function () {
         console.log(
           "Production Server is up and running on port number " +
             port +
