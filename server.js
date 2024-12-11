@@ -31,7 +31,7 @@ app.use(
 
 var port = process.env.PORT || 7002;
 
-if (process.env.NODE_ENV == "aaa") {
+if (process.env.NODE_ENV == "production") {
   try {
     https
       .createServer(
@@ -76,8 +76,9 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 const mongooseOptions = { useNewUrlParser: true, useUnifiedTopology: true };
+//mongodb+srv://gamesmalek2:fjVyRDZStzsxWnUR@cluster0.v1rdafh.mongodb.net/kanakku
 mongoose.set("strictQuery", true);
-mongoose.connect(`mongodb+srv://gamesmalek2:fjVyRDZStzsxWnUR@cluster0.v1rdafh.mongodb.net/kanakku`,
+mongoose.connect(`mongodb://127.0.0.1:27017/dreams_kanakku`,
   mongooseOptions,
   (err, response) => {
     if (err) {
