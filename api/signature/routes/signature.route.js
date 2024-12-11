@@ -13,7 +13,7 @@ const signatureValidator = require("../validations/signature.validator");
 const uploadImage = async (req, res, next) => {
     const storage = multer.diskStorage({
       destination: function (req, file, cb) {
-        cb(null, "./tmp");
+        cb(null, "/tmp");
       },
       filename: function (req, file, cb) {
         const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
