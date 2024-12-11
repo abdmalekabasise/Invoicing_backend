@@ -26,9 +26,7 @@ const resizeImage = async (req, res, next) => {
 const uploadImage = async (req, res, next) => {
   const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-      //cb(null, "./uploads/expenses");
-      cb(null, "./tmp");
-
+      cb(null, "./uploads/expenses");
     },
     filename: function (req, file, cb) {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);

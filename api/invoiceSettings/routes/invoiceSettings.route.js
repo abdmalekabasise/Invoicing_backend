@@ -11,9 +11,7 @@ const uploadImage = async (req, res, next) => {
 
   const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-      //cb(null, "./uploads/invoiceSettings");
-      cb(null, "./tmp");
-
+      cb(null, "./uploads/invoiceSettings");
     },
     filename: function (req, file, cb) {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
