@@ -77,8 +77,9 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 const mongooseOptions = { useNewUrlParser: true, useUnifiedTopology: true };
 //mongodb+srv://gamesmalek2:fjVyRDZStzsxWnUR@cluster0.v1rdafh.mongodb.net/kanakku
+//mongodb://127.0.0.1:27017/dreams_kanakku
 mongoose.set("strictQuery", true);
-mongoose.connect(`mongodb://127.0.0.1:27017/dreams_kanakku`,
+mongoose.connect(`mongodb+srv://gamesmalek2:fjVyRDZStzsxWnUR@cluster0.v1rdafh.mongodb.net/kanakku`,
   mongooseOptions,
   (err, response) => {
     if (err) {
