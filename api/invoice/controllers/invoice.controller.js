@@ -28,7 +28,8 @@ const notificationModel = require("../../notification/models/notification.model"
 const unauthorizedAPI = require("../../unauthorized_apis/controllers/unauthorized_apis.controller");
 const DeliveryChallanModel = require("../../delivery_challans/models/delivery_challans.model");
 const delivery_challansModel = require("../../delivery_challans/models/delivery_challans.model");
-const puppeteer = require("puppeteer");
+//const puppeteer = require("puppeteer");
+    //"puppeteer": "^21.3.8",
 const handlebars = require("handlebars");
 const { join, resolve } = require('path');
 
@@ -647,6 +648,7 @@ const totalLastYear = await invoiceModel.aggregate([
 // Card count function End
 
 //PDF generate function Start
+/*
 exports.sendPdf = async (req, res) => {
   try {
     var invoiceId = req.query.invoiceId;
@@ -776,7 +778,7 @@ exports.sendPdf = async (req, res) => {
     console.log("error :", error);
     response.error_message(error, res);
   }
-};
+};*/
 
 exports.view = async function (req, res) {
   const authUser = verify.verify_token(req.headers.token).details;
