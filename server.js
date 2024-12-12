@@ -69,8 +69,10 @@ if (process.env.NODE_ENV == "aa") {
 //   "Asia/Kolkata"
 // );
 
-app.use("/uploads", express.static(path.join(__dirname, "./uploads")));
 app.use("/tmp", express.static(path.join(__dirname, "./tmp")));
+
+
+app.use("/uploads", express.static(path.join(__dirname, "./uploads")));
 
 app.use(express.urlencoded({ extended: true }));
 
