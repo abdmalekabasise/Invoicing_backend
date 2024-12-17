@@ -348,7 +348,7 @@ exports.convertToInvoice = async (req, res) => {
         }`;
       fs.copyFileSync(`./${quotation.signatureImage}`, invoiceImagePath);
     }
-console.log(quotation);
+console.log("quotation.bank " ,quotation.bank);
 
     try {
       let minQuanProducts = [];
@@ -389,7 +389,7 @@ console.log(quotation);
             vat: quotation.vat,
             roundOff: quotation.roundOff,
             TotalAmount: quotation.TotalAmount,
-            bank: quotation.bank,
+            bank: quotation?.bank ? quotation?.bank : null ,
             notes: quotation.notes,
             termsAndCondition: quotation.termsAndCondition,
             signatureName: quotation.signature_name,

@@ -197,6 +197,7 @@ exports.update = async (req, res) => {
         deliveryChallanDate: request.deliveryChallanDate,
         dueDate: request.dueDate,
         referenceNo: request.referenceNo,
+        currency:request.currency,
         deliveryAddress: {
           name: request.deliveryAddress?.name,
           addressLine1: request.deliveryAddress?.addressLine1,

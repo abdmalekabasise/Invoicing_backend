@@ -861,6 +861,7 @@ exports.update = async (req, res) => {
     const bankValue = request.bank;
     const bankObjectId = bankValue ? mongoose.Types.ObjectId(bankValue) : null;
     let request1 = [];
+    
     request.items.forEach((item) => {
       let obj = {};
       obj.productId = item.productId;
@@ -871,6 +872,7 @@ exports.update = async (req, res) => {
 
     const invoiceRec = await invoiceModel.findById(req.params.id);
     let invoRec = invoiceRec;
+
     invoiceRec.items.forEach((item) => {
       request1.forEach((reqItem) => {
         if (item.productId == reqItem.productId) {
@@ -880,6 +882,8 @@ exports.update = async (req, res) => {
       });
     });
     let minQuanProducts = [];
+    console.log(request1);
+
     for (const item of request1) {
       let iteratedIds = [];
       const invRec = await inventoryModel
@@ -887,9 +891,10 @@ exports.update = async (req, res) => {
           productId: item.productId,
         })
         .lean();
+        
       if (
-        !iteratedIds.includes(invRec.productId) &&
-        invRec.quantity < parseInt(item.quantity)
+        !iteratedIds.includes(invRec?.productId) &&
+        invRec?.quantity < parseInt(item?.quantity)
       ) {
         invoRec.items.forEach((item) => {
           if (item.productId == invRec.productId) {
@@ -978,17 +983,22 @@ exports.update = async (req, res) => {
             const inventoryRecord = await inventoryModel.findOne({
               productId: item.productId,
             });
-            const updatedQty =
-              inventoryRecord.quantity + parseInt(item.quantity);
-            const invRec = await inventoryModel.findByIdAndUpdate(
-              inventoryRecord._id,
-              {
-                $set: {
-                  quantity: updatedQty,
-                },
-              },
-              { new: true }
-            );
+            console.log("invoiceDetails "+ invoiceDetails);
+           
+              if(inventoryRecord){
+                const updatedQty =
+                inventoryRecord.quantity + parseInt(item.quantity);
+                const invRec = await inventoryModel.findByIdAndUpdate(
+                  inventoryRecord._id,
+                  {
+                    $set: {
+                      quantity: updatedQty,
+                    },
+                  },
+                  { new: true }
+                );
+              }
+          
           }
           invoiceDetails.items.forEach(async (item) => {
             const inventoryRecord = await inventoryModel
@@ -996,7 +1006,10 @@ exports.update = async (req, res) => {
                 productId: item.productId,
               })
               .lean();
+
             if (inventoryRecord) {
+              console.log("ok "+ inventoryRecord);
+
               const updatedQuan =
                 parseInt(inventoryRecord.quantity) - parseInt(item.quantity);
               const updatedRec = await inventoryModel.findByIdAndUpdate(
@@ -1011,10 +1024,10 @@ exports.update = async (req, res) => {
             } else {
               let obj = {};
               obj.productId = item.productId;
-              obj.quantity = -item.quantity;
+              obj.quantity = item.quantity;
               obj.units = item.unit;
               obj.notes = request.notes;
-              obj.userId = authUser.role === "Super Admin" ? authUser.id : authUser.userId
+              obj.user_id = authUser.role === "Super Admin" ? authUser.id : authUser.userId
               obj.created_at = new Date();
               const inventoryRec = await inventoryModel.create(obj);
             }

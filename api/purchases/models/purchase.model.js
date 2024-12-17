@@ -33,6 +33,15 @@ const purchaseSchema = new Schema(
       type: Schema.Types.Array,
       required: true,
     },
+    selectedTaxRates: {
+      type: Schema.Types.Array,
+      required: true,
+    },
+    selectedOtherTaxes: { type: [Schema.Types.Boolean], required: true },
+    currency: {
+      type: Schema.Types.String,
+      required: true,
+    },
     discountType: {
       type: Schema.Types.String,
       required: false,
@@ -92,7 +101,7 @@ const purchaseSchema = new Schema(
     signatureId: {
       type: Schema.Types.ObjectId,
       required: false,
-      ref:"signature"
+      ref: "signature",
     },
     signatureName: {
       type: Schema.Types.String,
@@ -100,7 +109,7 @@ const purchaseSchema = new Schema(
     },
     signatureImage: {
       type: Schema.Types.String,
-      required: false,    
+      required: false,
     },
     isDeleted: {
       type: Schema.Types.Boolean,
