@@ -25,11 +25,11 @@ exports.customer_report = async (req, res) => {
         $lte: dates.endDate,
       };
     }
-    const customerRec = await customerModel
-      .find(filter)
-      .populate("customer_id");
+    const customerRec = await customerModel.find(filter);
     response.success_message(customerRec, res);
   } catch (error) {
+    console.log(error);
+
     response.error_message(error.messgae, res);
   }
 };
@@ -81,6 +81,8 @@ exports.balance_sheet_report = async (req, res) => {
     const salesRec = await salesModel.find(filter);
     response.success_message(salesRec, res);
   } catch (error) {
+    console.log(error);
+
     response.error_message(error.messgae, res);
   }
 };
@@ -118,6 +120,8 @@ exports.cash_flow_report = async (req, res) => {
     data.netCashFlow = data.income - data.expense;
     response.success_message(data, res);
   } catch (error) {
+    console.log(error);
+
     response.error_message(error.messgae, res);
   }
 };

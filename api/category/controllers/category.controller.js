@@ -23,7 +23,8 @@ exports.create = async (req, res) => {
         slug: request.slug,
         // parent_Category: request.parent_Category,
         image: filePath,
-        user_id: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
+        user_id:
+          auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
         created_at: new Date(),
       },
       (err, category) => {
@@ -50,14 +51,35 @@ exports.create = async (req, res) => {
     response.validation_error_message(data, res);
   }
 };
+exports.getInvoiceNumber = async (req, res) => {
+  const authUser = verify.verify_token(req.headers.token).details;
+  try {
+    let invoicePrefix = "C";
+    const invoiceRecords = await categoryModel
+      .find({
+        user_id:
+          authUser.role === "Super Admin" ? authUser.id : authUser.userId,
+      })
+      .count();
+    console.log(invoiceRecords);
 
+    const invoiceNumber = `${invoicePrefix}${(invoiceRecords + 1)
+      .toString()
+      .padStart(5, 0)}`;
+    response.success_message(invoiceNumber, res);
+  } catch (error) {
+    console.log("error :", error);
+    response.error_message(error.message, res);
+  }
+};
 exports.list = async (req, res) => {
   try {
     const auth_user = verify.verify_token(req.headers.token).details;
     const request = req.query;
     var filter = {};
     filter.isDeleted = false;
-    filter.user_id = auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId
+    filter.user_id =
+      auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId;
 
     if (request.category) {
       let splittedVal = request.category.split(",").map((id) => {
@@ -94,7 +116,11 @@ exports.view = async (req, res) => {
   console.log("here");
   const auth_user = verify.verify_token(req.headers.token).details;
   try {
-    const filter = { _id: req.params.id, user_id: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId };
+    const filter = {
+      _id: req.params.id,
+      user_id:
+        auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
+    };
     const optionsData = {
       select: "-__v -updated_at",
       page: parseInt(req.query.page) || 1,
@@ -127,7 +153,6 @@ exports.view = async (req, res) => {
 };
 
 exports.update = async (req, res) => {
-
   try {
     const auth_user = verify.verify_token(req.headers.token).details;
     const request = req.body;
@@ -160,7 +185,8 @@ exports.update = async (req, res) => {
       image: newImage,
       parent_Category: request.parent_Category,
       _id: { $ne: req.params.id },
-      user_id: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId
+      user_id:
+        auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
     });
 
     if (duplicateRec) {
@@ -188,7 +214,12 @@ exports.softDelete = async (req, res) => {
   const auth_user = verify.verify_token(req.headers.token).details;
   try {
     const category = await categoryModel.findOneAndUpdate(
-      { _id: req.params.id, isDeleted: { $ne: true }, user_id: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId },
+      {
+        _id: req.params.id,
+        isDeleted: { $ne: true },
+        user_id:
+          auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
+      },
       { $set: { isDeleted: true } }
     );
     data = { message: "Deleted Successfully", deletedCount: 1 };
