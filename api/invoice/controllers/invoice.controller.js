@@ -28,9 +28,10 @@ const notificationModel = require("../../notification/models/notification.model"
 const unauthorizedAPI = require("../../unauthorized_apis/controllers/unauthorized_apis.controller");
 const DeliveryChallanModel = require("../../delivery_challans/models/delivery_challans.model");
 const delivery_challansModel = require("../../delivery_challans/models/delivery_challans.model");
-const puppeteer = require("puppeteer");
+//const puppeteer = require("puppeteer");
+//"puppeteer": "^21.3.8",
 const handlebars = require("handlebars");
-const { join, resolve } = require('path');
+const { join, resolve } = require("path");
 
 var data;
 
@@ -62,108 +63,99 @@ exports.create = async (req, res) => {
           );
         }
       }
- 
-        let renewalDates = [];
-        if (request.isRecurring) {
-          renewalDates = commonDate.calculateRenewalDates(
-            request.invoiceDate,
-            parseInt(request.recurringCycle)
-          );
-        }
-        const invoiceSettings = await invoiceSettingsModel.find().lean();
-        let status = "DRAFTED";
-        if (request.payment_method == "Online") {
-          status = "SENT";
-        }
-        const invoicerec = await invoiceModel.create(
-          {
-            customerId: request.customerId,
-            invoiceDate: request.invoiceDate,
-            dueDate: request.dueDate,
-            renewalDates: renewalDates,
-            invoiceNumber: request.invoiceNumber,
-            referenceNo: request.referenceNo,
-            payment_method: request.payment_method,
-            items: request.items,
-            selectedOtherTaxes: request.selectedOtherTaxes,
-            selectedTaxRates: request.selectedTaxRates,
 
-            currency:request.currency,
-            notes: request.notes,
-            bank: bankObjectId,
-            termsAndCondition: request.termsAndCondition,
-            taxable_amount: request.taxable_amount,
-            sub_total: request.sub_total,
-            sign_type: request.sign_type,
-            signatureId: request.signatureId,
-            signatureName: request.signatureName,
-            signatureImage:
-              request.sign_type === "eSignature" ? filesName : null,
-            // signatureImage: filesName ? filesName : undefined,
-            taxableAmount: request.taxableAmount,
-            totalDiscount: request.totalDiscount,
-            vat: request.vat,
-            roundOff: request.roundOff,
-            TotalAmount: request.TotalAmount,
-            isRecurring: request.isRecurring,
-            recurringCycle: request.recurringCycle ? request.recurringCycle : 0,
-            total: request.total,
-            userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
-            status: status,
-            created_at: new Date(),
-            isDeleted: false,
-          },
-          async function (err, invoiceDetails) {
-            if (err) {
-              data = { message: err.message };
-              response.validation_error_message(data, res);
-            } else {
-              if (invoiceDetails) {
-                await invoiceDetails.items.forEach(async (item) => {
-                  const inventoryRecord = await inventoryModel.findOne({
-                    productId: item.productId,
-                  });
-                  if (inventoryRecord) {
-                    let updatedQty = Math.max(0, inventoryRecord.quantity - parseInt(item.quantity));
+      let renewalDates = [];
+      if (request.isRecurring) {
+        renewalDates = commonDate.calculateRenewalDates(
+          request.invoiceDate,
+          parseInt(request.recurringCycle)
+        );
+      }
+      const invoiceSettings = await invoiceSettingsModel.find().lean();
+      let status = "DRAFTED";
+      if (request.payment_method == "Online") {
+        status = "SENT";
+      }
+      const invoicerec = await invoiceModel.create(
+        {
+          customerId: request.customerId,
+          invoiceDate: request.invoiceDate,
+          dueDate: request.dueDate,
+          renewalDates: renewalDates,
+          invoiceNumber: request.invoiceNumber,
+          referenceNo: request.referenceNo,
+          payment_method: request.payment_method,
+          items: request.items,
+          selectedOtherTaxes: request.selectedOtherTaxes,
+          selectedTaxRates: request.selectedTaxRates,
 
-                    const updatedRec = await inventoryModel.findByIdAndUpdate(
-                      inventoryRecord._id,
-                      {
-                        $set: {
-                          quantity: updatedQty,
-                        },
-                      }
-                    );
-                  }
+          currency: request.currency,
+          notes: request.notes,
+          bank: bankObjectId,
+          termsAndCondition: request.termsAndCondition,
+          taxable_amount: request.taxable_amount,
+          sub_total: request.sub_total,
+          sign_type: request.sign_type,
+          signatureId: request.signatureId,
+          signatureName: request.signatureName,
+          signatureImage: request.sign_type === "eSignature" ? filesName : null,
+          // signatureImage: filesName ? filesName : undefined,
+          taxableAmount: request.taxableAmount,
+          totalDiscount: request.totalDiscount,
+          vat: request.vat,
+          roundOff: request.roundOff,
+          TotalAmount: request.TotalAmount,
+          isRecurring: request.isRecurring,
+          recurringCycle: request.recurringCycle ? request.recurringCycle : 0,
+          total: request.total,
+          userId:
+            authUser.role === "Super Admin" ? authUser.id : authUser.userId,
+          status: status,
+          created_at: new Date(),
+          isDeleted: false,
+        },
+        async function (err, invoiceDetails) {
+          if (err) {
+            data = { message: err.message };
+            response.validation_error_message(data, res);
+          } else {
+            if (invoiceDetails) {
+              await invoiceDetails.items.forEach(async (item) => {
+                const inventoryRecord = await inventoryModel.findOne({
+                  productId: item.productId,
                 });
-                if (status == "SENT") {
-                  req.query.invoiceId = invoiceDetails._id;
-                  req.query.value = "invoiceController";
-                  await unauthorizedAPI.sentPaymentLinks(req, res);
-                }
+                if (inventoryRecord) {
+                  let updatedQty = Math.max(
+                    0,
+                    inventoryRecord.quantity - parseInt(item.quantity)
+                  );
 
-                const customerName = await customerModel.findById(
-                  request.customerId
-                );
-                const adminRole = await users.findOne({ role: "Super Admin" });
-
-                let data = { message: "Invoice Created successfully." };
-
-                if (authUser.role === "Super Admin") {
-                  // Send notification only to Super Admin if available
-                  if (adminRole) {
-                    await notification.sendFCMMessage(
-                      {
-                        title: "Notification Message",
-                        body: ` An invoice has been created for ${customerName.name}`,
+                  const updatedRec = await inventoryModel.findByIdAndUpdate(
+                    inventoryRecord._id,
+                    {
+                      $set: {
+                        quantity: updatedQty,
                       },
-                      [adminRole._id]
-                    );
-                  } else {
-                    console.log("Super Admin not found in the database");
-                  }
-                } else if (authUser.role !== "Super Admin" && adminRole) {
-                  // Send notification to users who are not Super Admin but have the adminRole
+                    }
+                  );
+                }
+              });
+              if (status == "SENT") {
+                req.query.invoiceId = invoiceDetails._id;
+                req.query.value = "invoiceController";
+                await unauthorizedAPI.sentPaymentLinks(req, res);
+              }
+
+              const customerName = await customerModel.findById(
+                request.customerId
+              );
+              const adminRole = await users.findOne({ role: "Super Admin" });
+
+              let data = { message: "Invoice Created successfully." };
+
+              if (authUser.role === "Super Admin") {
+                // Send notification only to Super Admin if available
+                if (adminRole) {
                   await notification.sendFCMMessage(
                     {
                       title: "Notification Message",
@@ -171,17 +163,28 @@ exports.create = async (req, res) => {
                     },
                     [adminRole._id]
                   );
+                } else {
+                  console.log("Super Admin not found in the database");
                 }
-
-                response.success_message(data, res);
-              } else {
-                const errorMsg = { message: "Failed.", auth: true };
-                response.error_message(errorMsg, res);
+              } else if (authUser.role !== "Super Admin" && adminRole) {
+                // Send notification to users who are not Super Admin but have the adminRole
+                await notification.sendFCMMessage(
+                  {
+                    title: "Notification Message",
+                    body: ` An invoice has been created for ${customerName.name}`,
+                  },
+                  [adminRole._id]
+                );
               }
+
+              response.success_message(data, res);
+            } else {
+              const errorMsg = { message: "Failed.", auth: true };
+              response.error_message(errorMsg, res);
             }
           }
-        );
-      
+        }
+      );
     } catch (err) {
       console.log("error :", err);
       data = { message: err.message };
@@ -221,7 +224,8 @@ exports.customer_list = async (req, res) => {
   try {
     var filter = {};
     filter.isDeleted = false;
-    filter.userId = authUser.role === "Super Admin" ? authUser.id : authUser.userId;
+    filter.userId =
+      authUser.role === "Super Admin" ? authUser.id : authUser.userId;
     if (req.query.name) filter = { $or: [] };
     if (req.query.name)
       filter.$or.push({
@@ -256,13 +260,14 @@ exports.list = async function (req, res) {
     var filter = {};
     filter.isDeleted = false;
     filter.isSalesReturned = false;
-    filter.userId = authUser.role === "Super Admin" ? authUser.id : authUser.userId;
+    filter.userId =
+      authUser.role === "Super Admin" ? authUser.id : authUser.userId;
     const fromDateFilter = moment(req.query.fromDate);
     const endFDateFilter = moment(req.query.toDate);
 
     // Get only the date part
-    const fromDateOnly = fromDateFilter.format('YYYY-MM-DD');
-    const toDateOnly = endFDateFilter.format('YYYY-MM-DD');
+    const fromDateOnly = fromDateFilter.format("YYYY-MM-DD");
+    const toDateOnly = endFDateFilter.format("YYYY-MM-DD");
 
     if (req.query.fromDate && req.query.toDate) {
       filter.invoiceDate = {
@@ -272,7 +277,6 @@ exports.list = async function (req, res) {
     }
     if (req.query.status == "DRAFTED") {
       filter.status = "DRAFTED";
-    
     }
     if (
       req.query.status == "PAID" ||
@@ -320,7 +324,6 @@ exports.list = async function (req, res) {
       let status = ["PAID", "PARTIALLY_PAID", "SENT"];
       for (const item of result.docs) {
         if (Object.keys(item).length > 0) {
-          
         }
         const paymentDetails = await paymentModel.aggregate([
           {
@@ -378,7 +381,10 @@ exports.cardCount = async function (req, res) {
   try {
     var filter = {};
     let _ids = [];
-    const invoiceRec = await invoiceModel.find({ status: "PARTIALLY_PAID", userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId });
+    const invoiceRec = await invoiceModel.find({
+      status: "PARTIALLY_PAID",
+      userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
+    });
     for (const item of invoiceRec) {
       _ids.push(mongoose.Types.ObjectId(item._id));
     }
@@ -386,7 +392,9 @@ exports.cardCount = async function (req, res) {
       {
         $match: {
           invoiceId: { $in: _ids },
-          userId: mongoose.Types.ObjectId(authUser.role === "Super Admin" ? authUser.id : authUser.userId)
+          userId: mongoose.Types.ObjectId(
+            authUser.role === "Super Admin" ? authUser.id : authUser.userId
+          ),
         },
       },
       {
@@ -400,7 +408,9 @@ exports.cardCount = async function (req, res) {
       {
         $match: {
           isSalesReturned: false,
-          userId: mongoose.Types.ObjectId(authUser.role === "Super Admin" ? authUser.id : authUser.userId)
+          userId: mongoose.Types.ObjectId(
+            authUser.role === "Super Admin" ? authUser.id : authUser.userId
+          ),
         },
       },
       {
@@ -411,12 +421,154 @@ exports.cardCount = async function (req, res) {
         },
       },
     ]);
+    // New
+
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+    console.log("startOfToday " + startOfToday + "endOfToday " + endOfToday);
+
+    var total_invoice_today = await invoiceModel.aggregate([
+      {
+        $match: {
+          isSalesReturned: false,
+          userId: mongoose.Types.ObjectId(
+            authUser.role === "Super Admin" ? authUser.id : authUser.userId
+          ),
+          invoiceDate: { $gte: startOfToday, $lte: endOfToday }, // Filter for today's invoices
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          total_sum: { $sum: { $toDouble: "$TotalAmount" } },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const now = new Date();
+    const day = now.getDay(); // 0 (Sunday) to 6 (Saturday)
+    const diffToMonday = (day === 0 ? -6 : 1) - day; // Adjust for Sunday (0) being the last day of the previous week
+    const startOfWeek = new Date(now.setDate(now.getDate() + diffToMonday));
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    // Calculate end of the current week (Sunday)
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    var total_invoice_week = await invoiceModel.aggregate([
+      {
+        $match: {
+          isSalesReturned: false,
+          userId: mongoose.Types.ObjectId(
+            authUser.role === "Super Admin" ? authUser.id : authUser.userId
+          ),
+          invoiceDate: { $gte: startOfWeek, $lte: endOfWeek }, // Filter for this week
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          total_sum: { $sum: { $toDouble: "$TotalAmount" } },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    // Calculate the start of the month
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1); // Set to the first day of the month
+    startOfMonth.setHours(0, 0, 0, 0); // Set time to start of the day
+
+    // Calculate the end of the month
+    const endOfMonth = new Date(startOfMonth);
+    endOfMonth.setMonth(startOfMonth.getMonth() + 1); // Move to the next month
+    endOfMonth.setDate(0); // Set to the last day of the current month
+    endOfMonth.setHours(23, 59, 59, 999); // Set time to the end of the day
+
+    // Aggregation for total invoices in the current month
+    var total_invoice_month = await invoiceModel.aggregate([
+      {
+        $match: {
+          isSalesReturned: false,
+          userId: mongoose.Types.ObjectId(
+            authUser.role === "Super Admin" ? authUser.id : authUser.userId
+          ),
+          invoiceDate: { $gte: startOfMonth, $lte: endOfMonth }, // Filter for this month
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          total_sum: { $sum: { $toDouble: "$TotalAmount" } },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const today = new Date();
+    const startOfCurrentYear = new Date(today.getFullYear(), 0, 1);
+    const startOfLastYear = new Date(today.getFullYear() - 1, 0, 1);
+    const endOfLastYearToToday = new Date(
+      today.getFullYear() - 1,
+      today.getMonth(),
+      today.getDate()
+    );
+    console.log(endOfLastYearToToday);
+
+    const totalThisYear = await invoiceModel.aggregate([
+      {
+        $match: {
+          isSalesReturned: false,
+          userId: mongoose.Types.ObjectId(
+            authUser.role === "Super Admin" ? authUser.id : authUser.userId
+          ),
+          invoiceDate: { $gte: startOfCurrentYear, $lte: today },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          total_sum: { $sum: { $toDouble: "$TotalAmount" } },
+        },
+      },
+    ]);
+
+    const totalLastYear = await invoiceModel.aggregate([
+      {
+        $match: {
+          isSalesReturned: false,
+          userId: mongoose.Types.ObjectId(
+            authUser.role === "Super Admin" ? authUser.id : authUser.userId
+          ),
+          invoiceDate: { $gte: startOfLastYear, $lte: endOfLastYearToToday },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          total_sum: { $sum: { $toDouble: "$TotalAmount" } },
+        },
+      },
+    ]);
+
+    // Calculate the difference
+    const totalThisYearAmount = totalThisYear[0]?.total_sum || 0;
+    const totalLastYearAmount = totalLastYear[0]?.total_sum || 0;
+    const difference = totalThisYearAmount - totalLastYearAmount;
+
     var total_outstanding = await invoiceModel.aggregate([
       {
         $match: {
           status: { $nin: ["PAID", "DRAFTED", "SENT"] },
           isSalesReturned: false,
-          userId: mongoose.Types.ObjectId(authUser.role === "Super Admin" ? authUser.id : authUser.userId)
+          userId: mongoose.Types.ObjectId(
+            authUser.role === "Super Admin" ? authUser.id : authUser.userId
+          ),
         },
       },
       {
@@ -437,7 +589,9 @@ exports.cardCount = async function (req, res) {
           dueDate: { $lt: new Date() },
           status: { $nin: ["PAID", "PARTIALLY_PAID"] },
           isSalesReturned: false,
-          userId: mongoose.Types.ObjectId(authUser.role === "Super Admin" ? authUser.id : authUser.userId)
+          userId: mongoose.Types.ObjectId(
+            authUser.role === "Super Admin" ? authUser.id : authUser.userId
+          ),
         },
       },
       {
@@ -452,7 +606,9 @@ exports.cardCount = async function (req, res) {
       {
         $match: {
           status: "CANCELLED",
-          userId: mongoose.Types.ObjectId(authUser.role === "Super Admin" ? authUser.id : authUser.userId)
+          userId: mongoose.Types.ObjectId(
+            authUser.role === "Super Admin" ? authUser.id : authUser.userId
+          ),
         },
       },
       {
@@ -469,7 +625,9 @@ exports.cardCount = async function (req, res) {
           dueDate: { $gt: new Date() },
           status: { $in: ["DRAFTED", "SENT"] },
           isSalesReturned: false,
-          userId: mongoose.Types.ObjectId(authUser.role === "Super Admin" ? authUser.id : authUser.userId)
+          userId: mongoose.Types.ObjectId(
+            authUser.role === "Super Admin" ? authUser.id : authUser.userId
+          ),
         },
       },
       {
@@ -484,7 +642,9 @@ exports.cardCount = async function (req, res) {
       {
         $match: {
           isRecurring: true,
-          userId: mongoose.Types.ObjectId(authUser.role === "Super Admin" ? authUser.id : authUser.userId)
+          userId: mongoose.Types.ObjectId(
+            authUser.role === "Super Admin" ? authUser.id : authUser.userId
+          ),
         },
       },
       {
@@ -501,7 +661,11 @@ exports.cardCount = async function (req, res) {
     // ])
     data = {
       total_invoice: total_invoice,
+      total_invoice_today: total_invoice_today,
+      total_invoice_week: total_invoice_week,
       total_outstanding: total_outstanding,
+      difference: difference,
+      total_invoice_month: total_invoice_month,
       total_overdue: total_overdue,
       total_cancelled: total_cancelled,
       total_drafted: total_drafted,
@@ -517,6 +681,7 @@ exports.cardCount = async function (req, res) {
 // Card count function End
 
 //PDF generate function Start
+/*
 exports.sendPdf = async (req, res) => {
   try {
     var invoiceId = req.query.invoiceId;
@@ -646,16 +811,20 @@ exports.sendPdf = async (req, res) => {
     console.log("error :", error);
     response.error_message(error, res);
   }
-};
+};*/
 
 exports.view = async function (req, res) {
   const authUser = verify.verify_token(req.headers.token).details;
   try {
+    console.log("id ", req.params.id);
+
     const invoiceinfo = await invoiceModel
       .findOne({
         _id: mongoose.Types.ObjectId(req.params.id),
         is_deleted: false,
-        userId: mongoose.Types.ObjectId(authUser.role === "Super Admin" ? authUser.id : authUser.userId)
+        userId: mongoose.Types.ObjectId(
+          authUser.role === "Super Admin" ? authUser.id : authUser.userId
+        ),
       })
       .populate({ path: "customerId", select: "-updated_at -__v" })
       .populate({ path: "signatureId", select: "-updated_at -__v" })
@@ -729,6 +898,7 @@ exports.update = async (req, res) => {
     const bankValue = request.bank;
     const bankObjectId = bankValue ? mongoose.Types.ObjectId(bankValue) : null;
     let request1 = [];
+
     request.items.forEach((item) => {
       let obj = {};
       obj.productId = item.productId;
@@ -739,6 +909,7 @@ exports.update = async (req, res) => {
 
     const invoiceRec = await invoiceModel.findById(req.params.id);
     let invoRec = invoiceRec;
+
     invoiceRec.items.forEach((item) => {
       request1.forEach((reqItem) => {
         if (item.productId == reqItem.productId) {
@@ -748,6 +919,8 @@ exports.update = async (req, res) => {
       });
     });
     let minQuanProducts = [];
+    console.log(request1);
+
     for (const item of request1) {
       let iteratedIds = [];
       const invRec = await inventoryModel
@@ -755,9 +928,10 @@ exports.update = async (req, res) => {
           productId: item.productId,
         })
         .lean();
+
       if (
-        !iteratedIds.includes(invRec.productId) &&
-        invRec.quantity < parseInt(item.quantity)
+        !iteratedIds.includes(invRec?.productId) &&
+        invRec?.quantity < parseInt(item?.quantity)
       ) {
         invoRec.items.forEach((item) => {
           if (item.productId == invRec.productId) {
@@ -794,7 +968,7 @@ exports.update = async (req, res) => {
           invoiceNumber: request.invoiceNumber,
           referenceNo: request.referenceNo,
           payment_method: request.payment_method,
-          currency:request.currency,
+          currency: request.currency,
           selectedOtherTaxes: request.selectedOtherTaxes,
           selectedTaxRates: request.selectedTaxRates,
           items: request.items,
@@ -818,7 +992,8 @@ exports.update = async (req, res) => {
           isRecurring: request.isRecurring,
           recurringCycle: request.recurringCycle ? request.recurringCycle : 0,
           total: request.total,
-          userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId
+          userId:
+            authUser.role === "Super Admin" ? authUser.id : authUser.userId,
         },
       };
 
@@ -846,17 +1021,21 @@ exports.update = async (req, res) => {
             const inventoryRecord = await inventoryModel.findOne({
               productId: item.productId,
             });
-            const updatedQty =
-              inventoryRecord.quantity + parseInt(item.quantity);
-            const invRec = await inventoryModel.findByIdAndUpdate(
-              inventoryRecord._id,
-              {
-                $set: {
-                  quantity: updatedQty,
+            console.log("invoiceDetails " + invoiceDetails);
+
+            if (inventoryRecord) {
+              const updatedQty =
+                inventoryRecord.quantity + parseInt(item.quantity);
+              const invRec = await inventoryModel.findByIdAndUpdate(
+                inventoryRecord._id,
+                {
+                  $set: {
+                    quantity: updatedQty,
+                  },
                 },
-              },
-              { new: true }
-            );
+                { new: true }
+              );
+            }
           }
           invoiceDetails.items.forEach(async (item) => {
             const inventoryRecord = await inventoryModel
@@ -864,7 +1043,10 @@ exports.update = async (req, res) => {
                 productId: item.productId,
               })
               .lean();
+
             if (inventoryRecord) {
+              console.log("ok " + inventoryRecord);
+
               const updatedQuan =
                 parseInt(inventoryRecord.quantity) - parseInt(item.quantity);
               const updatedRec = await inventoryModel.findByIdAndUpdate(
@@ -879,10 +1061,11 @@ exports.update = async (req, res) => {
             } else {
               let obj = {};
               obj.productId = item.productId;
-              obj.quantity = -item.quantity;
+              obj.quantity = item.quantity;
               obj.units = item.unit;
               obj.notes = request.notes;
-              obj.userId = authUser.role === "Super Admin" ? authUser.id : authUser.userId
+              obj.user_id =
+                authUser.role === "Super Admin" ? authUser.id : authUser.userId;
               obj.created_at = new Date();
               const inventoryRec = await inventoryModel.create(obj);
             }
@@ -1015,8 +1198,9 @@ exports.cloneInvoice = async function (req, res) {
     if (originalInvoice.sign_type == "eSignature") {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
       const ext = path.extname(originalInvoice.signatureImage);
-      const invoiceImagePath = `./uploads/invoices/signatureImage-${uniqueSuffix + ext
-        }`;
+      const invoiceImagePath = `./uploads/invoices/signatureImage-${
+        uniqueSuffix + ext
+      }`;
       fs.copyFileSync(`./${originalInvoice.signatureImage}`, invoiceImagePath);
 
       originalInvoice.signatureImage = invoiceImagePath;
@@ -1036,10 +1220,17 @@ exports.cloneInvoice = async function (req, res) {
     if (minQuanProducts.length > 0) {
       response.validation_error_message({ message: minQuanProducts }, res);
     } else {
-      const invoiceModelCount = await invoiceModel.countDocuments({ userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId });
+      const invoiceModelCount = await invoiceModel.countDocuments({
+        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
+      });
       let count = invoiceModelCount + 1;
 
-      const invoiceSettings = await invoiceSettingsModel.find({ userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId }).lean();
+      const invoiceSettings = await invoiceSettingsModel
+        .find({
+          userId:
+            authUser.role === "Super Admin" ? authUser.id : authUser.userId,
+        })
+        .lean();
       const clonedInvoice = new invoiceModel(originalInvoice.toObject());
       clonedInvoice._id = mongoose.Types.ObjectId();
       clonedInvoice.status = "DRAFTED";
@@ -1124,8 +1315,9 @@ exports.convertsalesreturn = async (req, res) => {
     if (originalInvoiceDetails.sign_type == "eSignature") {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
       const ext = path.extname(originalInvoiceDetails.signatureImage);
-      creditNoteImagePath = `./uploads/credit_notes/signatureImage-${uniqueSuffix + ext
-        }`;
+      creditNoteImagePath = `./uploads/credit_notes/signatureImage-${
+        uniqueSuffix + ext
+      }`;
       fs.copyFileSync(
         `./${originalInvoiceDetails.signatureImage}`,
         creditNoteImagePath
@@ -1163,7 +1355,7 @@ exports.convertsalesreturn = async (req, res) => {
         signatureId: originalInvoiceDetails.signatureId
           ? originalInvoiceDetails.signatureId
           : null,
-        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId
+        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
       },
       async (err, crnrec) => {
         if (err) {
@@ -1246,12 +1438,20 @@ exports.convertRecurringInvoice = async (req, res) => {
 exports.getInvoiceNumber = async (req, res) => {
   const authUser = verify.verify_token(req.headers.token).details;
   try {
-    const invoiceSettingRecord = await invoiceSettingsModel.findOne({ userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId }).lean();
+    const invoiceSettingRecord = await invoiceSettingsModel
+      .findOne({
+        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
+      })
+      .lean();
     let invoicePrefix = "";
     if (invoiceSettingRecord && invoiceSettingRecord.invoicePrefix) {
       invoicePrefix = invoiceSettingRecord.invoicePrefix;
     }
-    const invoiceRecords = await invoiceModel.find({ userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId }).count();
+    const invoiceRecords = await invoiceModel
+      .find({
+        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
+      })
+      .count();
     const invoiceNumber = `${invoicePrefix}${(invoiceRecords + 1)
       .toString()
       .padStart(6, 0)}`;
@@ -1265,7 +1465,11 @@ exports.getInvoiceNumber = async (req, res) => {
 exports.generateDeliveryChallans = async (req, res) => {
   try {
     const authUser = verify.verify_token(req.headers.token).details;
-    const DeliveryChallansCount = await delivery_challansModel.find({ userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId }).count();
+    const DeliveryChallansCount = await delivery_challansModel
+      .find({
+        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
+      })
+      .count();
     const count = DeliveryChallansCount + 1;
     const invoiceRecord = await invoiceModel.findById(req.params.id);
     const customerRecord = await customerModel
@@ -1276,8 +1480,9 @@ exports.generateDeliveryChallans = async (req, res) => {
     if (invoiceRecord.sign_type == "eSignature") {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
       const ext = path.extname(invoiceRecord.signatureImage);
-      imagePath = `./uploads/delivery_challans/signatureImage-${uniqueSuffix + ext
-        }`;
+      imagePath = `./uploads/delivery_challans/signatureImage-${
+        uniqueSuffix + ext
+      }`;
       fs.copyFileSync(`./${invoiceRecord.signatureImage}`, imagePath);
     }
 
@@ -1304,7 +1509,7 @@ exports.generateDeliveryChallans = async (req, res) => {
       signatureName: invoiceRecord.signatureName,
       signatureImage:
         invoiceRecord.sign_type === "eSignature" ? imagePath : null,
-      userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId
+      userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
     });
     response.success_message("DeliveryChallan created successfully", res);
   } catch (error) {

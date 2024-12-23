@@ -36,6 +36,9 @@ exports.create = async (req, res) => {
       dueDate: request.dueDate,
       referenceNo: request.referenceNo,
       items: request.items,
+      selectedOtherTaxes: request.selectedOtherTaxes,
+      selectedTaxRates: request.selectedTaxRates,
+      currency:request.currency,
       // discountType: request.discountType,
       //  status: "PAID",
       // paymentMode: "CASH",
@@ -533,6 +536,9 @@ exports.convertToPurchase = async (req, res) => {
         userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
         created_at: new Date(),
         updated_at: new Date(),
+        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId
+
+
       });
 
       let data = {

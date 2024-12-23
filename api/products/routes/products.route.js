@@ -26,7 +26,8 @@ const resizeImage = async (req, res, next) => {
 const uploadImage = async (req, res, next) => {
   const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-      cb(null, "./uploads/products");
+      // cb(null, "./uploads/products");
+      cb(null, "./tmp");
     },
     filename: function (req, file, cb) {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
@@ -115,6 +116,11 @@ router.post(
   checkAccess.checkAccess("productsOrServices", "delete"),
   productsController.deleteImage
 );
+
 router.post("/searchProduct", checkAccess.checkAccess("productsOrServices", "view"), productsController.SearchProduct);
+
+router.get("/getProductCode/:type", productsController.getInvoiceNumber);
+router.get("/exp/exportProducts", productsController.exportProducts);
+
 
 module.exports = router;

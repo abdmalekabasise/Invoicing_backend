@@ -109,4 +109,6 @@ router.patch(
   categoryController.softDelete
 );
 
+router.get("/code/getCategoryCode", categoryController.getInvoiceNumber);
+
 module.exports = router;

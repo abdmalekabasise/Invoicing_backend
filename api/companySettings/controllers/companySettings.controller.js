@@ -31,6 +31,7 @@ exports.updateCompanySetting = async (req, res) => {
         addressLine1: request.addressLine1,
         addressLine2: request.addressLine2,
         city: request.city,
+        mat_fisc:request.mat_fisc,
         state: request.state,
         country: request.country,
         pincode: request.pincode,
@@ -86,6 +87,8 @@ exports.updateCompanySetting = async (req, res) => {
             companyName: request.companyName,
             email: request.email,
             phone: request.phone,
+            mat_fisc:request.mat_fisc,
+
             addressLine1: request.addressLine1,
             addressLine2: request.addressLine2,
             city: request.city,

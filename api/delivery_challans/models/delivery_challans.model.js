@@ -28,35 +28,44 @@ let delivery_challans = new Schema(
     deliveryAddress: {
       name: {
         type: Schema.Types.String,
-        required: true,
+        
       },
       addressLine1: {
         type: Schema.Types.String,
-        required: true,
+        
       },
       addressLine2: {
         type: Schema.Types.String,
-        required: false,
+        
       },
       city: {
         type: Schema.Types.String,
-        required: true,
+        
       },
       state: {
         type: Schema.Types.String,
-        required: true,
+        
       },
       pincode: {
         type: Schema.Types.String,
-        required: true,
+        
       },
       country: {
         type: Schema.Types.String,
-        required: true,
+        
       },
     },
     items: {
       type: Schema.Types.Array,
+      required: true,
+    },
+    selectedTaxRates: {
+      type: Schema.Types.Array,
+      required: true,
+    },
+    selectedOtherTaxes: { type: [Schema.Types.Boolean], required: true },
+    currency: {
+      type: Schema.Types.String,
       required: true,
     },
     discountType: {

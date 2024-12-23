@@ -37,7 +37,6 @@ exports.create = async (req, res) => {
       items: request.items,
       selectedOtherTaxes: request.selectedOtherTaxes,
       selectedTaxRates: request.selectedTaxRates,
-
       currency:request.currency,
       discountType: request.discountType,
       discount: request.discount,
@@ -331,26 +330,29 @@ exports.softDelete = async (req, res) => {
 
 exports.convertToInvoice = async (req, res) => {
   try {
+    
     const authUser = verify.verify_token(req.headers.token).details;
     const request = req.body;
+    console.log(request);
 
     const invoiceModelcount = await invoiceModel.find({ userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId }).count();
     let count = invoiceModelcount + 1;
 
     // Retrieve the quotation to be converted
-    const quotation = await quotationModel.findById(request._id);
+    const quotation = await quotationModel.findById(request.id);
     let invoiceImagePath = "";
-    if (quotation.sign_type == "eSignature") {
+    if (quotation?.sign_type == "eSignature") {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
       const ext = path.extname(quotation.signatureImage);
       invoiceImagePath = `./uploads/invoices/signatureImage-${uniqueSuffix + ext
         }`;
       fs.copyFileSync(`./${quotation.signatureImage}`, invoiceImagePath);
     }
+console.log("quotation.bank " ,quotation.bank);
 
     try {
       let minQuanProducts = [];
-      for (const item of quotation.items) {
+      for (const item of quotation?.items) {
         const invRec = await inventoryModel.findOne({
           productId: item.productId,
         });
@@ -362,9 +364,7 @@ exports.convertToInvoice = async (req, res) => {
           );
         }
       }
-      if (minQuanProducts.length > 0) {
-        response.validation_error_message({ message: minQuanProducts }, res);
-      } else {
+
         const invoiceSettings = await invoiceSettingsModel.find().lean();
 
         const invoicerec = await invoiceModel.create(
@@ -377,6 +377,10 @@ exports.convertToInvoice = async (req, res) => {
             dueDate: quotation.due_date,
             referenceNo: quotation.reference_no,
             items: quotation.items,
+            selectedOtherTaxes: quotation.selectedOtherTaxes,
+            selectedTaxRates: quotation.selectedTaxRates,
+            payment_method: "Cash", 
+            currency:quotation.currency,
             discountType: quotation.discountType,
             discount: quotation.discount,
             tax: quotation.tax,
@@ -385,14 +389,14 @@ exports.convertToInvoice = async (req, res) => {
             vat: quotation.vat,
             roundOff: quotation.roundOff,
             TotalAmount: quotation.TotalAmount,
-            bank: quotation.bank,
+            bank: quotation?.bank ? quotation?.bank : null ,
             notes: quotation.notes,
             termsAndCondition: quotation.termsAndCondition,
             signatureName: quotation.signature_name,
             signatureImage: invoiceImagePath,
             sign_type: quotation.sign_type,
             signatureId: quotation.signatureId ? quotation.signatureId : null,
-            isRecurring: request.isRecurring,
+            isRecurring: false,
             recurringCycle: request.recurringCycle ? request.recurringCycle : 0,
             userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
             status: "DRAFTED",
@@ -433,7 +437,7 @@ exports.convertToInvoice = async (req, res) => {
             }
           }
         );
-      }
+      
     } catch (err) {
       console.log("error :", err);
       data = { message: err.message };

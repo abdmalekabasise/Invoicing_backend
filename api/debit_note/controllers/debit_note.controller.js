@@ -73,7 +73,7 @@ exports.create = async (req, res) => {
         signatureId: request.signatureId,
         signatureName: request.signatureName,
         signatureImage: request.sign_type === "eSignature" ? filePath : null,
-        userId: authUser.id,
+        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
         isDeleted: false,
       });
 
@@ -101,6 +101,7 @@ exports.create = async (req, res) => {
           vendorId: debitrec.vendorId,
           created_at: new Date(),
           updated_at: new Date(),
+          userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
         });
         const vendorId = request.vendorId;
         const vendorName = await vendor.findOne({ _id: vendorId });

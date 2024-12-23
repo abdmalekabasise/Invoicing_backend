@@ -49,6 +49,9 @@ exports.create = async (req, res) => {
             country: request.deliveryAddress?.country,
           },
           items: request.items,
+          selectedOtherTaxes: request.selectedOtherTaxes,
+          selectedTaxRates: request.selectedTaxRates,
+          currency:request.currency,
           discountType: request.discountType,
           discount: request.discount,
           tax: request.tax,
@@ -194,6 +197,7 @@ exports.update = async (req, res) => {
         deliveryChallanDate: request.deliveryChallanDate,
         dueDate: request.dueDate,
         referenceNo: request.referenceNo,
+        currency:request.currency,
         deliveryAddress: {
           name: request.deliveryAddress?.name,
           addressLine1: request.deliveryAddress?.addressLine1,

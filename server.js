@@ -31,7 +31,7 @@ app.use(
 
 var port = process.env.PORT || 7002;
 
-if (process.env.NODE_ENV == "production") {
+if (process.env.NODE_ENV == "aa") {
   try {
     https
       .createServer(
@@ -41,7 +41,7 @@ if (process.env.NODE_ENV == "production") {
         },
         app
       )
-      .listen(port, function () {
+      .listen(port, "0.0.0.0", function () {
         console.log(
           "Production Server is up and running on port number " +
             port +
@@ -69,16 +69,21 @@ if (process.env.NODE_ENV == "production") {
 //   "Asia/Kolkata"
 // );
 
+app.use("/tmp", express.static(path.join(__dirname, "./tmp")));
+
+
 app.use("/uploads", express.static(path.join(__dirname, "./uploads")));
+
 app.use(express.urlencoded({ extended: true }));
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 const mongooseOptions = { useNewUrlParser: true, useUnifiedTopology: true };
+//mongodb+srv://gamesmalek2:fjVyRDZStzsxWnUR@cluster0.v1rdafh.mongodb.net/kanakku
+//mongodb://127.0.0.1:27017/dreams_kanakku
 mongoose.set("strictQuery", true);
-mongoose.connect(
-  `mongodb://${config.database.host}:${config.database.port}/${config.database.db}`,
+mongoose.connect(`mongodb+srv://gamesmalek2:fjVyRDZStzsxWnUR@cluster0.v1rdafh.mongodb.net/kanakku`,
   mongooseOptions,
   (err, response) => {
     if (err) {

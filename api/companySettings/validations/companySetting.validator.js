@@ -8,9 +8,7 @@ exports.update = [
   body("phone")
     .trim()
     .notEmpty()
-    .withMessage("is required")
-    .isLength({ min: 10 })
-    .withMessage("number should have atleast 10 Numeric"),
+    .withMessage("is required"),
   body("addressLine1")
     .trim()
     .notEmpty()

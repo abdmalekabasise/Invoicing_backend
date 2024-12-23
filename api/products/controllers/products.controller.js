@@ -6,10 +6,63 @@ const fs = require("fs");
 const path = require("path");
 const mongoose = require("mongoose");
 const { isNumber } = require("util");
+
 const invoiceModel = require("../../invoice/models/invoice.model");
 const purchaseModel = require("../../purchases/models/purchase.model");
 
+
+const PDFDocument = require("pdfkit");
+const { Readable } = require("stream");
+const { createArrayCsvStringifier } = require("csv-writer");
+
 var data;
+
+exports.exportProducts = async (req, res) => {
+  console.log("ok");
+  const auth_user = verify.verify_token(req.headers.token).details;
+  try {
+    const request = req.query;
+    let filter = {};
+    filter.isDeleted = false;
+    filter.userId =
+      auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId;
+
+    if (request.product) {
+      let splittedVal = request.product.split(",").map((id) => {
+        return mongoose.Types.ObjectId(id);
+      });
+      filter._id = { $in: splittedVal };
+    }
+    if (request.search_product) {
+      filter.name = {
+        $regex: `^${request.search_product}`,
+        $options: "i",
+      };
+    }
+    const productRecordsCount = await productsModel.find(filter).count();
+    const productRec = await productsModel
+      .find(filter)
+      .sort({ _id: -1 })
+      .lean()
+      .populate("category")
+      .populate("units")
+      .populate("tax");
+    productRec.forEach((item) => {
+      item.text = item.name;
+      item.id = item._id;
+      if (item.images && item.images.length > 0 && item.images[0]) {
+        item.images = `${process.env.DEVLOPMENT_BACKEND_URL}/${item.images[0]}`;
+        if (item.category && item.category.image) {
+          item.category.image = `${process.env.DEVLOPMENT_BACKEND_URL}/${item.category.image}`;
+        }
+      }
+    });
+    response.success_message(productRec, res, productRecordsCount);
+  } catch (error) {
+    console.log("error :", error);
+    response.error_message(error.message, res);
+  }
+};
 
 exports.create = async (req, res) => {
   try {
@@ -23,7 +76,8 @@ exports.create = async (req, res) => {
     const name = request.name.trim().toLowerCase();
     const productrec = await productsModel.findOne({
       name: { $regex: new RegExp(`^${name}$`, "i") },
-      userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
+      userId:
+        auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
       isDeleted: false,
     });
     if (productrec) {
@@ -36,7 +90,9 @@ exports.create = async (req, res) => {
         sku: request.sku,
         category: request.category,
         sellingPrice: request.sellingPrice,
-        purchasePrice: !isNaN(request.purchasePrice) ? request.purchasePrice : 0,
+        purchasePrice: !isNaN(request.purchasePrice)
+          ? request.purchasePrice
+          : 0,
         discountValue: request.discountValue,
         units: request.units,
         discountType: request.discountType,
@@ -44,7 +100,8 @@ exports.create = async (req, res) => {
         alertQuantity: 1,
         tax: request.tax ? request.tax : null,
         productDescription: request.productDescription,
-        userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
+        userId:
+          auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
         images: filePath,
       });
 
@@ -61,14 +118,33 @@ exports.create = async (req, res) => {
     response.error_message(error.message, res);
   }
 };
-
+exports.getInvoiceNumber = async (req, res) => {
+  const authUser = verify.verify_token(req.headers.token).details;
+  try {
+    let invoicePrefix = req.params.type === "product" ? "P" : "S";
+    const invoiceRecords = await productsModel
+      .find({
+        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
+        type: req.params.type === "product" ? "product" : "service",
+      })
+      .count();
+    const invoiceNumber = `${invoicePrefix}${(invoiceRecords + 1)
+      .toString()
+      .padStart(5, 0)}`;
+    response.success_message(invoiceNumber, res);
+  } catch (error) {
+    console.log("error :", error);
+    response.error_message(error.message, res);
+  }
+};
 exports.list = async (req, res) => {
   const auth_user = verify.verify_token(req.headers.token).details;
   try {
     const request = req.query;
     let filter = {};
     filter.isDeleted = false;
-    filter.userId = auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId;
+    filter.userId =
+      auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId;
 
     if (request.product) {
       let splittedVal = request.product.split(",").map((id) => {
@@ -113,7 +189,11 @@ exports.view = async (req, res) => {
   const auth_user = verify.verify_token(req.headers.token).details;
   try {
     const productsinfo = await productsModel
-      .findOne({ _id: req.params.id, userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId })
+      .findOne({
+        _id: req.params.id,
+        userId:
+          auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
+      })
       .populate("units")
       .populate("tax")
       .populate("category")
@@ -164,7 +244,9 @@ exports.update = async (req, res) => {
         sku: request.sku,
         category: request.category,
         sellingPrice: parseInt(request.sellingPrice),
-        purchasePrice: !isNaN(request.purchasePrice) ? request.purchasePrice : 0,
+        purchasePrice: !isNaN(request.purchasePrice)
+          ? request.purchasePrice
+          : 0,
         discountValue: parseInt(request.discountValue),
         units: request.units,
         discountType: request.discountType,
@@ -174,7 +256,8 @@ exports.update = async (req, res) => {
         productDescription: request.productDescription,
         purchase_account: request.purchase_account,
         purchase_description: request.purchase_description,
-        userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
+        userId:
+          auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
         images: newImage,
       },
     };
@@ -182,7 +265,8 @@ exports.update = async (req, res) => {
     const name = request.name.trim().toLowerCase();
     const dublicaterec = await productsModel.findOne({
       name: { $regex: new RegExp(`^${name}$`, "i") },
-      userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
+      userId:
+        auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
       _id: { $ne: req.params.id },
     });
 
@@ -210,7 +294,12 @@ exports.delete = async (req, res) => {
   const auth_user = verify.verify_token(req.headers.token).details;
   try {
     const product_model = await productsModel.findOneAndUpdate(
-      { _id: req.body._id, isDeleted: { $ne: true }, userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId },
+      {
+        _id: req.body._id,
+        isDeleted: { $ne: true },
+        userId:
+          auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
+      },
       { $set: { isDeleted: true } },
       { new: true }
     );

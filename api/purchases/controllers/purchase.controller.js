@@ -16,7 +16,11 @@ exports.create = async (req, res) => {
   try {
     const authUser = verify.verify_token(req.headers.token).details;
     const request = req.body;
-    const purchaseCount = await purchaseModel.find({ userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId }).count();
+    const purchaseCount = await purchaseModel
+      .find({
+        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
+      })
+      .count();
     let count = purchaseCount + 1;
     let filePath = "";
     if (req.file) {
@@ -30,6 +34,9 @@ exports.create = async (req, res) => {
       referenceNo: request.referenceNo,
       supplierInvoiceSerialNumber: request.supplierInvoiceSerialNumber,
       items: request.items,
+      selectedOtherTaxes: request.selectedOtherTaxes,
+      selectedTaxRates: request.selectedTaxRates,
+      currency: request.currency,
       discountType: request.discountType,
       status: "PAID",
       paymentMode: "CASH",
@@ -71,7 +78,8 @@ exports.create = async (req, res) => {
           obj.quantity = item.quantity;
           obj.units = item.unit;
           obj.notes = request.notes;
-          obj.user_id = authUser.role === "Super Admin" ? authUser.id : authUser.userId
+          obj.user_id =
+            authUser.role === "Super Admin" ? authUser.id : authUser.userId;
           obj.created_at = new Date();
           const inventoryRec = await inventoryModel.create(obj);
         }
@@ -86,7 +94,7 @@ exports.create = async (req, res) => {
         vendorId: purchaseRec.vendorId,
         created_at: new Date(),
         updated_at: new Date(),
-        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId
+        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
       });
       const vendorName = await vendor.findOne({ _id: request.vendorId });
 
@@ -165,7 +173,8 @@ exports.update = async (req, res) => {
           signatureName:
             request.sign_type === "eSignature" ? request.signatureName : null,
           signatureImage: request.sign_type === "eSignature" ? filePath : null,
-          userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId
+          userId:
+            authUser.role === "Super Admin" ? authUser.id : authUser.userId,
         },
       },
       { new: true }
@@ -205,7 +214,8 @@ exports.update = async (req, res) => {
           obj.quantity = item.quantity;
           obj.units = item.unit;
           obj.notes = request.notes;
-          obj.user_id = authUser.role === "Super Admin" ? authUser.id : authUser.userId
+          obj.user_id =
+            authUser.role === "Super Admin" ? authUser.id : authUser.userId;
           obj.created_at = new Date();
           const inventoryRec = await inventoryModel.create(obj);
         }
@@ -222,7 +232,7 @@ exports.update = async (req, res) => {
         vendorId: purchaseRec.vendorId,
         created_at: new Date(),
         updated_at: new Date(),
-        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId
+        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
       });
       let data = {
         message: "purchase updated successfully",
@@ -262,7 +272,7 @@ exports.list = async (req, res) => {
     const request = req.query;
     let filter = {
       isDeleted: false,
-      userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId
+      userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
     };
 
     if (request.vendor) {
@@ -302,9 +312,12 @@ exports.list = async (req, res) => {
 exports.view = async (req, res) => {
   try {
     const authUser = verify.verify_token(req.headers.token).details;
-    request.userId = authUser.role === "Super Admin" ? authUser.id : authUser.userId;
+
     const purchaseRecord = await purchaseModel
-      .findOne({ _id: req.params.id, userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId })
+      .findOne({
+        _id: req.params.id,
+        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
+      })
       .populate("vendorId")
       .populate("signatureId")
       .lean();
@@ -356,7 +369,7 @@ exports.delete = async (req, res) => {
         vendorId: purchaseRec.vendorId,
         created_at: new Date(),
         updated_at: new Date(),
-        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId
+        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
       });
       let vendorName = null;
       if (purchaseRec.vendorId) {
@@ -365,8 +378,9 @@ exports.delete = async (req, res) => {
 
       const notificationMessage = {
         title: "Notification Message",
-        body: `Purchase has been Deleted${vendorName ? ` for ${vendorName.vendor_name}` : ""
-          }`,
+        body: `Purchase has been Deleted${
+          vendorName ? ` for ${vendorName.vendor_name}` : ""
+        }`,
       };
 
       const adminRole = await users.findOne({ role: "Super Admin" });

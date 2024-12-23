@@ -10,7 +10,36 @@ let vendor = new Schema({
   mat_fisc: {
     type: Schema.Types.String,
     required: false,
-
+  },
+  billingAddress: {
+    name: {
+      type: Schema.Types.String,
+      required: false,
+    },
+    addressLine1: {
+      type: Schema.Types.String,
+      required: false,
+    },
+    addressLine2: {
+      type: Schema.Types.String,
+      required: false,
+    },
+    city: {
+      type: Schema.Types.String,
+      required: false,
+    },
+    state: {
+      type: Schema.Types.String,
+      required: false,
+    },
+    pincode: {
+      type: Schema.Types.String,
+      required: false,
+    },
+    country: {
+      type: Schema.Types.String,
+      required: false,
+    },
   },
   balanceType: {
     type: String,

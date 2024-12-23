@@ -10,6 +10,7 @@ module.exports.jwtauth = function (req, res, next) {
   ) {
     jwt.verify(
       req.headers.token,
+
       process.env.JWTSECRET,
       function (err, decoded) {
         if (err) {
