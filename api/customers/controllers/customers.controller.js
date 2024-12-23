@@ -407,6 +407,9 @@ exports.CustomerDetails = async (req, res) => {
       });
     }
     const customerRec = await customersModel.aggregate(filter);
+    if (!customerRec) {
+      return response.success_message([], res);
+    }
     const pipeline = [
       [
         {
@@ -582,6 +585,24 @@ exports.CustomerDetails = async (req, res) => {
     response.success_message(data, res);
   } catch (error) {
     console.log("error :", error);
-    response.error_message(error.message, res);
+    response.success_message([], res);
   }
 };
+exports.SearchCustomer = async (req, res) => {
+  const auth_user = verify.verify_token(req.headers.token).details;
+  const input = req.body.searchInput;
+  console.log(input)
+  try {
+    let data = await customersModel.find({
+      name: { $regex: new RegExp(`.*${input}.*`, 'i') },
+      userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
+
+    }).limit(8);;
+    response.success_message(data, res);
+  } catch (error) {
+    console.log("error :", error);
+    response.error_message(error.message, res);
+  }
+
+
+}

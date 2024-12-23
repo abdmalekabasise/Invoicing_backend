@@ -120,6 +120,7 @@ router.get(
   checkAccess.checkAccess("customer", "view"),
   customersController.list
 );
+router.post("/searchCustomer", checkAccess.checkAccess("customer", "view"), customersController.SearchCustomer);
 router.get("/CustomerWithInvoices", customersController.CustomerDetails);
 
 module.exports = router;
