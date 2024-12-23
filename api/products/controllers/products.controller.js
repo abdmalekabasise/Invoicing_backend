@@ -1,10 +1,14 @@
 const productsModel = require("../models/products.model");
+const InvoiceModel = require("../../invoice/models/invoice.model");
 const response = require("../../../response");
 const verify = require("../../../verify.token");
 const fs = require("fs");
 const path = require("path");
 const mongoose = require("mongoose");
 const { isNumber } = require("util");
+const invoiceModel = require("../../invoice/models/invoice.model");
+const purchaseModel = require("../../purchases/models/purchase.model");
+
 var data;
 
 exports.create = async (req, res) => {
@@ -241,3 +245,141 @@ exports.deleteImage = async (req, res) => {
     response.error_message(error.message, res);
   }
 };
+
+exports.calculateProductProfit = async (req, res) => {
+  try {
+    const auth_user = verify.verify_token(req.headers.token).details;
+    const productId = req.params.id;
+    console.log(productId);
+    try {
+      const invoices = await invoiceModel.aggregate([
+        {
+          $match: {
+            'items.productId': productId,  // Matching the productId in the items array
+            isDeleted: false  // Optionally add to only include non-deleted invoices
+          }
+        },
+        {
+          $project: {
+            invoiceNumber: 1,  // Include other fields as needed
+            invoiceDate: 1,
+            TotalAmount: 1,
+            status: 1,
+            _id: 1,
+            currency: 1,
+            items: {
+              $filter: {
+                input: '$items',
+                as: 'item',
+                cond: { $eq: ['$$item.productId', productId] }  // Filter items array for the specific productId
+              }
+            }
+          }
+        }
+      ]);
+      console.log(invoices)
+
+      // Extract and return the rates from the filtered items
+      const result = invoices.map(invoice => {
+        return {
+          invoiceNumber: invoice.invoiceNumber,
+          createdAt: invoice.invoiceDate,
+          TotalAmount: invoice.TotalAmount,
+          status: invoice.status,
+          _id: invoice._id,
+          currency: invoice.currency,
+          itemRates: invoice.items.map(item => item.rate)  // Extracting the rate from each item
+        };
+      });
+      response.success_message(result, res);
+    } catch (err) {
+      console.error(err);
+      throw new Error('Error fetching invoice data');
+    }
+
+    // Return the result which contains the total profit for each invoice
+
+  } catch (error) {
+    console.log("error :", error);
+    response.error_message(error.message, res);
+  }
+};
+
+exports.SearchProduct = async (req, res) => {
+  const auth_user = verify.verify_token(req.headers.token).details;
+  const input = req.body.searchInput;
+  console.log(input)
+  try {
+    let data = await productsModel.find({
+      name: { $regex: new RegExp(`.*${input}.*`, 'i') },
+      userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
+
+    }).limit(8);;
+    response.success_message(data, res);
+  } catch (error) {
+    console.log("error :", error);
+    response.error_message(error.message, res);
+  }
+
+
+};
+
+exports.purchasesPerProducts = async (req, res) => {
+  try {
+    const auth_user = verify.verify_token(req.headers.token).details;
+    const productId = req.params.id;
+    console.log(productId);
+    try {
+      const invoices = await purchaseModel.aggregate([
+        {
+          $match: {
+            'items.productId': productId,  // Matching the productId in the items array
+            isDeleted: false  // Optionally add to only include non-deleted invoices
+          }
+        },
+        {
+          $project: {
+            purchaseId: 1,  // Include other fields as needed
+            purchaseDate: 1,
+            TotalAmount: 1,
+            status: 1,
+            _id: 1,
+            //  currency: 1,
+            items: {
+              $filter: {
+                input: '$items',
+                as: 'item',
+                cond: { $eq: ['$$item.productId', productId] }  // Filter items array for the specific productId
+              }
+            }
+          }
+        }
+      ]);
+      console.log(invoices)
+
+      // Extract and return the rates from the filtered items
+      const result = invoices.map(invoice => {
+        return {
+          invoiceNumber: invoice.invoiceNumber,
+          createdAt: invoice.purchaseDate,
+          TotalAmount: invoice.TotalAmount,
+          status: invoice.status,
+          _id: invoice._id,
+          //    currency: invoice.currency,
+          itemRates: invoice.items.map(item => item.rate)  // Extracting the rate from each item
+        };
+      });
+      response.success_message(result, res);
+    } catch (err) {
+      console.error(err);
+      throw new Error('Error fetching invoice data');
+    }
+
+    // Return the result which contains the total profit for each invoice
+
+  } catch (error) {
+    console.log("error :", error);
+    response.error_message(error.message, res);
+  }
+};
+

@@ -516,7 +516,7 @@ exports.convertToPurchase = async (req, res) => {
           obj.quantity = parseInt(item.quantity);
           obj.units = item.unit;
           obj.notes = request.notes;
-          obj.user_id = authUser.id;
+          obj.user_id = authUser.role === "Super Admin" ? authUser.id : authUser.userId;
           obj.created_at = new Date();
           const inventoryRec = await inventoryModel.create(obj);
         }
@@ -530,6 +530,7 @@ exports.convertToPurchase = async (req, res) => {
         mode: "Credit",
         amount: Number(purchaseOrder.TotalAmount),
         vendorId: purchaseOrder.vendorId,
+        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
         created_at: new Date(),
         updated_at: new Date(),
       });
