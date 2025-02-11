@@ -10,7 +10,6 @@ const { isNumber } = require("util");
 const invoiceModel = require("../../invoice/models/invoice.model");
 const purchaseModel = require("../../purchases/models/purchase.model");
 
-
 const PDFDocument = require("pdfkit");
 const { Readable } = require("stream");
 const { createArrayCsvStringifier } = require("csv-writer");
@@ -344,32 +343,47 @@ exports.calculateProductProfit = async (req, res) => {
       const invoices = await invoiceModel.aggregate([
         {
           $match: {
-            'items.productId': productId,  // Matching the productId in the items array
-            isDeleted: false  // Optionally add to only include non-deleted invoices
-          }
+            "items.productId": productId, // Matching the productId in the items array
+            isDeleted: false, // Optionally add to only include non-deleted invoices
+          },
         },
         {
           $project: {
-            invoiceNumber: 1,  // Include other fields as needed
+            invoiceNumber: 1, // Include other fields as needed
             invoiceDate: 1,
+            customerId: 1,
             TotalAmount: 1,
             status: 1,
             _id: 1,
             currency: 1,
             items: {
               $filter: {
-                input: '$items',
-                as: 'item',
-                cond: { $eq: ['$$item.productId', productId] }  // Filter items array for the specific productId
-              }
-            }
-          }
-        }
+                input: "$items",
+                as: "item",
+                cond: { $eq: ["$$item.productId", productId] }, // Filter items array for the specific productId
+              },
+            },
+          },
+        },
+        {
+          $lookup: {
+            from: "customers", // Name of the customers collection
+            localField: "customerId", // Field in the invoices collection
+            foreignField: "_id", // Field in the customers collection
+            as: "customerId", // Output array with matching customer details
+          },
+        },
+        {
+          $unwind: {
+            path: "$customerDetails",
+            preserveNullAndEmptyArrays: true, // Include invoices even if no customer is found
+          },
+        },
       ]);
-      console.log(invoices)
+      console.log(invoices);
 
       // Extract and return the rates from the filtered items
-      const result = invoices.map(invoice => {
+      const result = invoices.map((invoice) => {
         return {
           invoiceNumber: invoice.invoiceNumber,
           createdAt: invoice.invoiceDate,
@@ -377,17 +391,88 @@ exports.calculateProductProfit = async (req, res) => {
           status: invoice.status,
           _id: invoice._id,
           currency: invoice.currency,
-          itemRates: invoice.items.map(item => item.rate)  // Extracting the rate from each item
+          itemRates: invoice.items.map((item) => item.rate), // Extracting the rate from each item
         };
       });
-      response.success_message(result, res);
+      response.success_message(invoices, res);
     } catch (err) {
       console.error(err);
-      throw new Error('Error fetching invoice data');
+      throw new Error("Error fetching invoice data");
     }
 
     // Return the result which contains the total profit for each invoice
+  } catch (error) {
+    console.log("error :", error);
+    response.error_message(error.message, res);
+  }
+};
+exports.reportCategory = async (req, res) => {
+  try {
+    const auth_user = verify.verify_token(req.headers.token).details;
+    const productId = req.params.id;
+    console.log(productId);
+    try {
+      const invoices = await invoiceModel.aggregate([
+        {
+          $match: {
+            "items.cat._id": productId, // Matching the productId in the items array
+            isDeleted: false, // Optionally add to only include non-deleted invoices
+          },
+        },
+        {
+          $project: {
+            invoiceNumber: 1, // Include other fields as needed
+            invoiceDate: 1,
+            customerId: 1,
+            TotalAmount: 1,
+            status: 1,
+            _id: 1,
+            currency: 1,
+            items: {
+              $filter: {
+                input: "$items",
+                as: "item",
+                cond: { $eq: ["$$item.cat._id", productId] }, // Filter items array for the specific productId
+              },
+            },
+          },
+        },
+        {
+          $lookup: {
+            from: "customers", // Name of the customers collection
+            localField: "customerId", // Field in the invoices collection
+            foreignField: "_id", // Field in the customers collection
+            as: "customerId", // Output array with matching customer details
+          },
+        },
+        {
+          $unwind: {
+            path: "$customerDetails",
+            preserveNullAndEmptyArrays: true, // Include invoices even if no customer is found
+          },
+        },
+      ]);
+      console.log(invoices);
 
+      // Extract and return the rates from the filtered items
+      const result = invoices.map((invoice) => {
+        return {
+          invoiceNumber: invoice.invoiceNumber,
+          createdAt: invoice.invoiceDate,
+          TotalAmount: invoice.TotalAmount,
+          status: invoice.status,
+          _id: invoice._id,
+          currency: invoice.currency,
+          itemRates: invoice.items.map((item) => item.rate), // Extracting the rate from each item
+        };
+      });
+      response.success_message(invoices, res);
+    } catch (err) {
+      console.error(err);
+      throw new Error("Error fetching invoice data");
+    }
+
+    // Return the result which contains the total profit for each invoice
   } catch (error) {
     console.log("error :", error);
     response.error_message(error.message, res);
@@ -397,20 +482,20 @@ exports.calculateProductProfit = async (req, res) => {
 exports.SearchProduct = async (req, res) => {
   const auth_user = verify.verify_token(req.headers.token).details;
   const input = req.body.searchInput;
-  console.log(input)
+  console.log(input);
   try {
-    let data = await productsModel.find({
-      name: { $regex: new RegExp(`.*${input}.*`, 'i') },
-      userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
-
-    }).limit(8);;
+    let data = await productsModel
+      .find({
+        name: { $regex: new RegExp(`.*${input}.*`, "i") },
+        userId:
+          auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
+      })
+      .limit(8);
     response.success_message(data, res);
   } catch (error) {
     console.log("error :", error);
     response.error_message(error.message, res);
   }
-
-
 };
 
 exports.purchasesPerProducts = async (req, res) => {
@@ -422,13 +507,13 @@ exports.purchasesPerProducts = async (req, res) => {
       const invoices = await purchaseModel.aggregate([
         {
           $match: {
-            'items.productId': productId,  // Matching the productId in the items array
-            isDeleted: false  // Optionally add to only include non-deleted invoices
-          }
+            "items.productId": productId, // Matching the productId in the items array
+            isDeleted: false, // Optionally add to only include non-deleted invoices
+          },
         },
         {
           $project: {
-            purchaseId: 1,  // Include other fields as needed
+            purchaseId: 1, // Include other fields as needed
             purchaseDate: 1,
             TotalAmount: 1,
             status: 1,
@@ -436,18 +521,18 @@ exports.purchasesPerProducts = async (req, res) => {
             //  currency: 1,
             items: {
               $filter: {
-                input: '$items',
-                as: 'item',
-                cond: { $eq: ['$$item.productId', productId] }  // Filter items array for the specific productId
-              }
-            }
-          }
-        }
+                input: "$items",
+                as: "item",
+                cond: { $eq: ["$$item.productId", productId] }, // Filter items array for the specific productId
+              },
+            },
+          },
+        },
       ]);
-      console.log(invoices)
+      console.log(invoices);
 
       // Extract and return the rates from the filtered items
-      const result = invoices.map(invoice => {
+      const result = invoices.map((invoice) => {
         return {
           invoiceNumber: invoice.invoiceNumber,
           createdAt: invoice.purchaseDate,
@@ -455,20 +540,18 @@ exports.purchasesPerProducts = async (req, res) => {
           status: invoice.status,
           _id: invoice._id,
           //    currency: invoice.currency,
-          itemRates: invoice.items.map(item => item.rate)  // Extracting the rate from each item
+          itemRates: invoice.items.map((item) => item.rate), // Extracting the rate from each item
         };
       });
       response.success_message(result, res);
     } catch (err) {
       console.error(err);
-      throw new Error('Error fetching invoice data');
+      throw new Error("Error fetching invoice data");
     }
 
     // Return the result which contains the total profit for each invoice
-
   } catch (error) {
     console.log("error :", error);
     response.error_message(error.message, res);
   }
 };
-

@@ -16,7 +16,8 @@ exports.create = async (req, res) => {
     var request = req.body;
     const auth_user = verify.verify_token(req.headers.token).details;
     let query = {
-      userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
+      userId:
+        auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
       isDeleted: false,
     };
 
@@ -61,8 +62,9 @@ exports.create = async (req, res) => {
           : " ",
         IFSC: request.bankDetails ? request.bankDetails.IFSC : " ",
       },
-      userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
-      mat_fisc: request.mat_fisc
+      userId:
+        auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
+      mat_fisc: request.mat_fisc,
     };
     const customerrec = await customersModel.create(val);
     if (customerrec) {
@@ -72,7 +74,6 @@ exports.create = async (req, res) => {
       };
       response.success_message(data, res);
     }
-
   } catch (error) {
     console.log("error :", error);
     response.error_message(error.message, res);
@@ -81,7 +82,9 @@ exports.create = async (req, res) => {
 
 exports.list = async (req, res) => {
   const auth_user = verify.verify_token(req.headers.token).details;
-  console.log(auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId)
+  console.log(
+    auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId
+  );
   try {
     const request = req.query;
     let query = [
@@ -96,7 +99,9 @@ exports.list = async (req, res) => {
       {
         $match: {
           isDeleted: false,
-          userId: mongoose.Types.ObjectId(auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId)
+          userId: mongoose.Types.ObjectId(
+            auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId
+          ),
         },
       },
       {
@@ -189,7 +194,11 @@ exports.view = async (req, res) => {
   const auth_user = verify.verify_token(req.headers.token).details;
   try {
     const customerinfo = await customersModel
-      .findOne({ _id: req.params.id, userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId })
+      .findOne({
+        _id: req.params.id,
+        userId:
+          auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
+      })
       .select("-__v -updated_at")
       .lean();
     if (customerinfo) {
@@ -274,8 +283,9 @@ exports.update = async (req, res) => {
             : " ",
           IFSC: request.bankDetails ? request.bankDetails.IFSC : " ",
         },
-        userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
-        mat_fisc: request.mat_fisc
+        userId:
+          auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
+        mat_fisc: request.mat_fisc,
       },
     };
 
@@ -285,7 +295,6 @@ exports.update = async (req, res) => {
       _id: { $ne: req.params.id },
     });
 
-
     const cus = await customersModel.findByIdAndUpdate(
       req.params.id,
       newvalues
@@ -294,7 +303,6 @@ exports.update = async (req, res) => {
       data = { message: "Customer updated successfully." };
       response.success_message(data, res);
     }
-
   } catch (error) {
     console.log("Error:", error);
     response.error_message(error.message, res);
@@ -327,7 +335,8 @@ exports.activateCustomer = async (req, res) => {
       {
         $set: {
           status: "Active",
-          userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId
+          userId:
+            auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
         },
       },
       {
@@ -351,7 +360,8 @@ exports.deactivateCustomer = async (req, res) => {
       {
         $set: {
           status: "Deactive",
-          userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId
+          userId:
+            auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
         },
       },
       {
@@ -387,9 +397,22 @@ exports.CustomerDetails = async (req, res) => {
         },
       },
       {
+        $addFields: {
+          invoiceRecs: {
+            $filter: {
+              input: "$invoiceRecs",
+              as: "invoice",
+              cond: { $eq: ["$$invoice.isSalesReturned", false] },
+            },
+          },
+        },
+      },
+      {
         $match: {
           _id: mongoose.Types.ObjectId(request._id),
-          userId: mongoose.Types.ObjectId(auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId)
+          userId: mongoose.Types.ObjectId(
+            auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId
+          ),
         },
       },
       {
@@ -419,7 +442,37 @@ exports.CustomerDetails = async (req, res) => {
                 $match: {
                   customerId: mongoose.Types.ObjectId(request._id),
                   isDeleted: false,
-                  userId: mongoose.Types.ObjectId(auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId)
+                  isSalesReturned: false,
+                  userId: mongoose.Types.ObjectId(
+                    auth_user.role === "Super Admin"
+                      ? auth_user.id
+                      : auth_user.userId
+                  ),
+                },
+              },
+              {
+                $group: {
+                  _id: null,
+                  amount: {
+                    $sum: { $toDouble: "$TotalAmount" },
+                  },
+                  count: {
+                    $sum: 1,
+                  },
+                },
+              },
+            ],
+            totalAvoir: [
+              {
+                $match: {
+                  customerId: mongoose.Types.ObjectId(request._id),
+                  isDeleted: false,
+                  isSalesReturned: true,
+                  userId: mongoose.Types.ObjectId(
+                    auth_user.role === "Super Admin"
+                      ? auth_user.id
+                      : auth_user.userId
+                  ),
                 },
               },
               {
@@ -440,7 +493,11 @@ exports.CustomerDetails = async (req, res) => {
                   customerId: mongoose.Types.ObjectId(request._id),
                   status: "PAID",
                   isDeleted: false,
-                  userId: mongoose.Types.ObjectId(auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId)
+                  userId: mongoose.Types.ObjectId(
+                    auth_user.role === "Super Admin"
+                      ? auth_user.id
+                      : auth_user.userId
+                  ),
                 },
               },
               {
@@ -462,7 +519,11 @@ exports.CustomerDetails = async (req, res) => {
                   customerId: mongoose.Types.ObjectId(request._id),
                   status: { $nin: ["PAID", "DRAFTED"] },
                   isDeleted: false,
-                  userId: mongoose.Types.ObjectId(auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId)
+                  userId: mongoose.Types.ObjectId(
+                    auth_user.role === "Super Admin"
+                      ? auth_user.id
+                      : auth_user.userId
+                  ),
                 },
               },
               {
@@ -485,7 +546,11 @@ exports.CustomerDetails = async (req, res) => {
                   dueDate: { $gt: moment(new Date()).format("DD-MM-YYYY") },
                   status: "DRAFTED",
                   isDeleted: false,
-                  userId: mongoose.Types.ObjectId(auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId)
+                  userId: mongoose.Types.ObjectId(
+                    auth_user.role === "Super Admin"
+                      ? auth_user.id
+                      : auth_user.userId
+                  ),
                 },
               },
               {
@@ -506,7 +571,11 @@ exports.CustomerDetails = async (req, res) => {
                   customerId: mongoose.Types.ObjectId(request._id),
                   status: "CANCELLED",
                   isDeleted: false,
-                  userId: mongoose.Types.ObjectId(auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId)
+                  userId: mongoose.Types.ObjectId(
+                    auth_user.role === "Super Admin"
+                      ? auth_user.id
+                      : auth_user.userId
+                  ),
                 },
               },
               {
@@ -528,7 +597,11 @@ exports.CustomerDetails = async (req, res) => {
                   status: { $nin: ["PAID", "PARTIALLY_PAID"] },
                   dueDate: { $lt: moment(new Date()).format("DD-MM-YYYY") },
                   isDeleted: false,
-                  userId: mongoose.Types.ObjectId(auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId)
+                  userId: mongoose.Types.ObjectId(
+                    auth_user.role === "Super Admin"
+                      ? auth_user.id
+                      : auth_user.userId
+                  ),
                 },
               },
               {
@@ -549,6 +622,8 @@ exports.CustomerDetails = async (req, res) => {
     ];
     const invoiceDetails = await invoiceModel.aggregate(pipeline);
     data.cardDetails = invoiceDetails;
+    let totPayed = 0;
+    let totImpayed = 0;
     if (customerRec.length > 0) {
       if (customerRec[0].image) {
         customerRec[0].image = `${process.env.DEVLOPMENT_BACKEND_URL}/${customerRec[0].image}`;
@@ -558,7 +633,11 @@ exports.CustomerDetails = async (req, res) => {
           {
             $match: {
               invoiceId: mongoose.Types.ObjectId(item._id),
-              userId: mongoose.Types.ObjectId(auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId)
+              userId: mongoose.Types.ObjectId(
+                auth_user.role === "Super Admin"
+                  ? auth_user.id
+                  : auth_user.userId
+              ),
             },
           },
           {
@@ -573,13 +652,22 @@ exports.CustomerDetails = async (req, res) => {
         if (paymentDetails.length > 0) {
           item.balance =
             parseFloat(item.TotalAmount) - paymentDetails[0].paidAmount;
+          totImpayed +=
+            parseFloat(item.TotalAmount) - paymentDetails[0].paidAmount;
           item.paidAmount = paymentDetails[0].paidAmount;
+          totPayed += item.paidAmount;
         } else {
-          item.balance = item.TotalAmount;
+          item.balance = parseFloat(item.TotalAmount);
+          totImpayed += parseFloat(item.TotalAmount);
+
           item.paidAmount = 0;
+          totPayed += 0;
         }
       }
     }
+    console.log("payed ", totPayed, " impayed ", totImpayed.toFixed(2));
+    data.cardDetails[0].totPayed = totPayed;
+    data.cardDetails[0].totImpayed = totImpayed;
 
     data.customerDetails = customerRec;
     response.success_message(data, res);
@@ -588,21 +676,22 @@ exports.CustomerDetails = async (req, res) => {
     response.success_message([], res);
   }
 };
+
 exports.SearchCustomer = async (req, res) => {
   const auth_user = verify.verify_token(req.headers.token).details;
   const input = req.body.searchInput;
-  console.log(input)
+  console.log(input);
   try {
-    let data = await customersModel.find({
-      name: { $regex: new RegExp(`.*${input}.*`, 'i') },
-      userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
-
-    }).limit(8);;
+    let data = await customersModel
+      .find({
+        name: { $regex: new RegExp(`.*${input}.*`, "i") },
+        userId:
+          auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
+      })
+      .limit(8);
     response.success_message(data, res);
   } catch (error) {
     console.log("error :", error);
     response.error_message(error.message, res);
   }
-
-
-}
+};

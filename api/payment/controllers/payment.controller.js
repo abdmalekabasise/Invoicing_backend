@@ -133,8 +133,15 @@ exports.view = function (req, res) {
 // list the payment
 exports.list = async function (req, res) {
   const request = req.query;
+  const authUser = verify.verify_token(req.headers.token).details;
 
-  let paymentRecordsCount = await paymentModel.find({}).lean();
+  let paymentRecordsCount = await paymentModel
+    .find({
+      userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
+    })
+    .lean();
+  console.log(paymentRecordsCount);
+
   for (const item of paymentRecordsCount) {
     let customerDetail = await invoiceModel
       .findById(item.invoiceId)
@@ -155,7 +162,9 @@ exports.list = async function (req, res) {
   paymentRecordsCount = paymentRecordsCount.length;
 
   let result = await paymentModel
-    .find({})
+    .find({
+      userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
+    })
     .sort({ _id: -1 })
     .skip(request.skip)
     .limit(request.limit)
@@ -171,6 +180,7 @@ exports.list = async function (req, res) {
     }
     item.customerDetail = customerDetail.customerId;
     item.invoiceNumber = customerDetail.invoiceNumber;
+    item.currency = customerDetail.currency;
   }
   if (request.customer) {
     let customerArr = request.customer.split(",");

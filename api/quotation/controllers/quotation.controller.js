@@ -15,7 +15,7 @@ const users = require("../../auth/models/auth.model");
 var data;
 
 exports.create = async (req, res) => {
-  console.log("quotation")
+  console.log("quotation");
   try {
     var request = req.body;
     const auth_user = verify.verify_token(req.headers.token).details;
@@ -23,7 +23,12 @@ exports.create = async (req, res) => {
     if (req.file) {
       filePath = req.file.path;
     }
-    const qtCount = await quotationModel.find({ userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId }).count();
+    const qtCount = await quotationModel
+      .find({
+        userId:
+          auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
+      })
+      .count();
 
     let count = qtCount + 1;
     const quotationRec = await quotationModel.create({
@@ -37,7 +42,7 @@ exports.create = async (req, res) => {
       items: request.items,
       selectedOtherTaxes: request.selectedOtherTaxes,
       selectedTaxRates: request.selectedTaxRates,
-      currency:request.currency,
+      currency: request.currency,
       discountType: request.discountType,
       discount: request.discount,
       tax: request.tax,
@@ -50,11 +55,13 @@ exports.create = async (req, res) => {
       notes: request.notes,
       termsAndCondition: request.termsAndCondition,
       sign_type: request.sign_type,
-      signatureId: request.signatureId,
+      signatureId:
+        request.signatureId === "undefined" ? null : request.signatureId,
       signatureName: request.signatureName,
       signatureImage: request.sign_type === "eSignature" ? filePath : null,
       isDeleted: false,
-      userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
+      userId:
+        auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
       created_at: new Date(),
     });
     const customerName = await customerModel.findById(request.customerId);
@@ -94,13 +101,13 @@ exports.create = async (req, res) => {
 };
 
 exports.list = async (req, res) => {
-
   try {
     const auth_user = verify.verify_token(req.headers.token).details;
     const request = req.query;
     let filter = {
       isDeleted: false,
-      userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId
+      userId:
+        auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
     };
 
     if (request.customer) {
@@ -149,7 +156,11 @@ exports.view = async (req, res) => {
   try {
     const auth_user = verify.verify_token(req.headers.token).details;
     const quotationRec = await quotationModel
-      .findOne({ _id: req.params.id, userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId })
+      .findOne({
+        _id: req.params.id,
+        userId:
+          auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
+      })
       .populate("customerId")
       .populate({ path: "signatureId" })
       .lean();
@@ -168,7 +179,6 @@ exports.view = async (req, res) => {
 
 exports.update = async (req, res) => {
   try {
-
     const auth_user = verify.verify_token(req.headers.token).details;
     const request = req.body;
     const quotation_id = req.params.id;
@@ -199,7 +209,7 @@ exports.update = async (req, res) => {
       selectedOtherTaxes: request.selectedOtherTaxes,
       selectedTaxRates: request.selectedTaxRates,
 
-      currency:request.currency,
+      currency: request.currency,
       discountType: request.discountType,
       discount: request.discount,
       tax: request.tax,
@@ -213,7 +223,7 @@ exports.update = async (req, res) => {
       termsAndCondition: request.termsAndCondition,
       sign_type: request.sign_type,
       signatureId:
-        request.sign_type !== "eSignature" ? request.signatureId : null,
+        request.signatureId === "undefined" ? null : request.signatureId,
       signatureName:
         request.sign_type === "eSignature" ? request.signatureName : null,
       signatureImage: request.sign_type === "eSignature" ? newImage : null,
@@ -270,7 +280,6 @@ exports.update = async (req, res) => {
 
 exports.softDelete = async (req, res) => {
   try {
-
     const auth_user = verify.verify_token(req.headers.token).details;
     // let request = req.body;
 
@@ -293,8 +302,9 @@ exports.softDelete = async (req, res) => {
           await notification.sendFCMMessage(
             {
               title: "Notification Message",
-              body: `Quotation has been Deleted for ${customer ? customer.name : "Unknown Customer"
-                }`,
+              body: `Quotation has been Deleted for ${
+                customer ? customer.name : "Unknown Customer"
+              }`,
             },
             [adminRole._id]
           );
@@ -306,8 +316,9 @@ exports.softDelete = async (req, res) => {
         await notification.sendFCMMessage(
           {
             title: "Notification Message",
-            body: `Quotation has been Deleted for ${customer ? customer.name : "Unknown Customer"
-              }`,
+            body: `Quotation has been Deleted for ${
+              customer ? customer.name : "Unknown Customer"
+            }`,
           },
           [adminRole._id]
         );
@@ -330,12 +341,15 @@ exports.softDelete = async (req, res) => {
 
 exports.convertToInvoice = async (req, res) => {
   try {
-    
     const authUser = verify.verify_token(req.headers.token).details;
     const request = req.body;
     console.log(request);
 
-    const invoiceModelcount = await invoiceModel.find({ userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId }).count();
+    const invoiceModelcount = await invoiceModel
+      .find({
+        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
+      })
+      .count();
     let count = invoiceModelcount + 1;
 
     // Retrieve the quotation to be converted
@@ -344,11 +358,12 @@ exports.convertToInvoice = async (req, res) => {
     if (quotation?.sign_type == "eSignature") {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
       const ext = path.extname(quotation.signatureImage);
-      invoiceImagePath = `./uploads/invoices/signatureImage-${uniqueSuffix + ext
-        }`;
+      invoiceImagePath = `./uploads/invoices/signatureImage-${
+        uniqueSuffix + ext
+      }`;
       fs.copyFileSync(`./${quotation.signatureImage}`, invoiceImagePath);
     }
-console.log("quotation.bank " ,quotation.bank);
+    console.log("quotation.bank ", quotation.bank);
 
     try {
       let minQuanProducts = [];
@@ -365,79 +380,79 @@ console.log("quotation.bank " ,quotation.bank);
         }
       }
 
-        const invoiceSettings = await invoiceSettingsModel.find().lean();
+      const invoiceSettings = await invoiceSettingsModel.find().lean();
 
-        const invoicerec = await invoiceModel.create(
-          {
-            invoiceNumber: `${invoiceSettings[0].invoicePrefix}${count
-              .toString()
-              .padStart(6, "0")}`,
-            customerId: quotation.customerId,
-            invoiceDate: quotation.quotation_date,
-            dueDate: quotation.due_date,
-            referenceNo: quotation.reference_no,
-            items: quotation.items,
-            selectedOtherTaxes: quotation.selectedOtherTaxes,
-            selectedTaxRates: quotation.selectedTaxRates,
-            payment_method: "Cash", 
-            currency:quotation.currency,
-            discountType: quotation.discountType,
-            discount: quotation.discount,
-            tax: quotation.tax,
-            taxableAmount: quotation.taxableAmount,
-            totalDiscount: quotation.totalDiscount,
-            vat: quotation.vat,
-            roundOff: quotation.roundOff,
-            TotalAmount: quotation.TotalAmount,
-            bank: quotation?.bank ? quotation?.bank : null ,
-            notes: quotation.notes,
-            termsAndCondition: quotation.termsAndCondition,
-            signatureName: quotation.signature_name,
-            signatureImage: invoiceImagePath,
-            sign_type: quotation.sign_type,
-            signatureId: quotation.signatureId ? quotation.signatureId : null,
-            isRecurring: false,
-            recurringCycle: request.recurringCycle ? request.recurringCycle : 0,
-            userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
-            status: "DRAFTED",
-            created_at: new Date(),
-            isDeleted: false,
-          },
-          async function (err, invoiceDetails) {
-            if (err) {
-              data = { message: err.message };
-              response.validation_error_message(data, res);
-            } else {
-              if (invoiceDetails) {
-                await invoiceDetails.items.forEach(async (item) => {
-                  const inventoryRecord = await inventoryModel.findOne({
-                    productId: item.productId,
-                  });
-                  if (inventoryRecord) {
-                    let updatedQty =
-                      inventoryRecord.quantity - parseInt(item.quantity);
-                    const updatedRec = await inventoryModel.findByIdAndUpdate(
-                      inventoryRecord._id,
-                      {
-                        $set: {
-                          quantity: updatedQty,
-                        },
-                      }
-                    );
-                  }
+      const invoicerec = await invoiceModel.create(
+        {
+          invoiceNumber: `${invoiceSettings[0].invoicePrefix}${count
+            .toString()
+            .padStart(6, "0")}`,
+          customerId: quotation.customerId,
+          invoiceDate: quotation.quotation_date,
+          dueDate: quotation.due_date,
+          referenceNo: quotation.reference_no,
+          items: quotation.items,
+          selectedOtherTaxes: quotation.selectedOtherTaxes,
+          selectedTaxRates: quotation.selectedTaxRates,
+          payment_method: "Cash",
+          currency: quotation.currency,
+          discountType: quotation.discountType,
+          discount: quotation.discount,
+          tax: quotation.tax,
+          taxableAmount: quotation.taxableAmount,
+          totalDiscount: quotation.totalDiscount,
+          vat: quotation.vat,
+          roundOff: quotation.roundOff,
+          TotalAmount: quotation.TotalAmount,
+          bank: quotation?.bank ? quotation?.bank : null,
+          notes: quotation.notes,
+          termsAndCondition: quotation.termsAndCondition,
+          signatureName: quotation.signature_name,
+          signatureImage: invoiceImagePath,
+          sign_type: quotation.sign_type,
+          signatureId: quotation.signatureId ? quotation.signatureId : null,
+          isRecurring: false,
+          recurringCycle: request.recurringCycle ? request.recurringCycle : 0,
+          userId:
+            authUser.role === "Super Admin" ? authUser.id : authUser.userId,
+          status: "DRAFTED",
+          created_at: new Date(),
+          isDeleted: false,
+        },
+        async function (err, invoiceDetails) {
+          if (err) {
+            data = { message: err.message };
+            response.validation_error_message(data, res);
+          } else {
+            if (invoiceDetails) {
+              await invoiceDetails.items.forEach(async (item) => {
+                const inventoryRecord = await inventoryModel.findOne({
+                  productId: item.productId,
                 });
-                data = {
-                  message: "Quotation converted to invoice successfully.",
-                };
-                response.success_message(data, res);
-              } else {
-                data = { message: "Failed.", auth: true };
-                response.error_message(data, res);
-              }
+                if (inventoryRecord) {
+                  let updatedQty =
+                    inventoryRecord.quantity - parseInt(item.quantity);
+                  const updatedRec = await inventoryModel.findByIdAndUpdate(
+                    inventoryRecord._id,
+                    {
+                      $set: {
+                        quantity: updatedQty,
+                      },
+                    }
+                  );
+                }
+              });
+              data = {
+                message: "Quotation converted to invoice successfully.",
+              };
+              response.success_message(data, res);
+            } else {
+              data = { message: "Failed.", auth: true };
+              response.error_message(data, res);
             }
           }
-        );
-      
+        }
+      );
     } catch (err) {
       console.log("error :", err);
       data = { message: err.message };
@@ -460,8 +475,9 @@ exports.cloneQuotation = async (req, res) => {
     if (originalQuotation.sign_type == "eSignature") {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
       const ext = path.extname(originalQuotation.signatureImage);
-      const quotationImagePath = `./uploads/quotation/signatureImage-${uniqueSuffix + ext
-        }`;
+      const quotationImagePath = `./uploads/quotation/signatureImage-${
+        uniqueSuffix + ext
+      }`;
       fs.copyFileSync(
         `./${originalQuotation.signatureImage}`,
         quotationImagePath
@@ -489,7 +505,12 @@ exports.cloneQuotation = async (req, res) => {
 exports.getQuotationNumber = async (req, res) => {
   try {
     const auth_user = verify.verify_token(req.headers.token).details;
-    const creditNoteRecords = await quotationModel.find({ userId: auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId }).count();
+    const creditNoteRecords = await quotationModel
+      .find({
+        userId:
+          auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
+      })
+      .count();
     const creditNoteNumber = `QUO-${(creditNoteRecords + 1)
       .toString()
       .padStart(6, 0)}`;

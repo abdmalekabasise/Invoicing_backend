@@ -40,8 +40,8 @@
             <img style="width:200px;border:0px;display: inline!important;" src="{{invoice.invoiceLogo}}" width="200" border="0"  editable="true" data-icon data-image-edit data-url data-label="Logo" data-image-width alt="logo">
           </td>
           <td align="right" class="center-text">
-            <h2 style="font-size:24px;margin:0;">INVOICE</h2>
-            <h3 style="font-size:18px;margin:0;color: black;font-weight: 400;">Date:<span style="font-size:24px;margin:0 8px;color: #2c3038;font-weight: 700;"> {{invoice.invoiceDate}}</span> Invoice No: <span style="font-size:24px;margin:0 8px;font-weight: 700;color: #2c3038;">{{invoice.invoiceNumber}}</span></h3>
+            <h2 style="font-size:24px;margin:0;">Facture</h2>
+            <h3 style="font-size:18px;margin:0;color: black;font-weight: 400;">Date:<span style="font-size:24px;margin:0 8px;color: #2c3038;font-weight: 700;"> {{invoice.invoiceDate}}</span> Facture N°: <span style="font-size:24px;margin:0 8px;font-weight: 700;color: #2c3038;">{{invoice.invoiceNumber}}</span></h3>
           </td>
         </tr>
       </table>
@@ -55,23 +55,17 @@
             <table>
               <tr>
                 
-                <td align="left" style="width: 30%;vertical-align: top; border-left: 30px;">
-                  <h2 style="font-size:20px;display:block;margin:0 0 10px; color: black;font-weight: 400;"><b>Pay To:</b></h2>
-                  <h2 style="font-size:16px;display:block;margin:0 ; color: #2C3038;font-weight: 400;">{{invoice.customerId.name}}</h2>
-                  <h2 style="font-size:16px;display:block;margin:0 ; color: #2C3038;font-weight: 400;">{{invoice.customerId.shippingAddress.addressLine1}},{{invoice.customerId.shippingAddress.city}}</h2>
-                  <h2 style="font-size:16px;display:block;margin:0 ; color: #2C3038;font-weight: 400;">{{invoice.customerId.shippingAddress.state}},{{invoice.customerId.shippingAddress.country}}</h2>
-                  <h2 style="font-size:16px;display:block;margin:0 ; color: #2C3038;font-weight: 400;">{{invoice.customerId.email}}</h2>
-                  <h2 style="font-size:16px;display:block;margin:0 ; color: #2C3038;font-weight: 400;">{{invoice.customerId.phone}}</h2>
-                </td>
+               
               </tr>
               <tr>
                 <td align="left" style="width: 30%;vertical-align: top; padding-top: 30px;">
-                  <h2 style="font-size:20px;display:block;margin:0 0 10px; color: black;font-weight: 400;"><b>Invoice To:</b></h2>
+                  <h2 style="font-size:20px;display:block;margin:0 0 10px; color: black;font-weight: 400;"><b>Client:</b></h2>
                   <h2 style="font-size:16px;display:block;margin:0 ; color: #2C3038;font-weight: 400;">{{invoice.customerId.name}}</h2>
-                  <h2 style="font-size:16px;display:block;margin:0 ; color: #2C3038;font-weight: 400;">{{invoice.customerId.shippingAddress.addressLine1}},{{invoice.customerId.shippingAddress.city}}</h2>
-                  <h2 style="font-size:16px;display:block;margin:0 ; color: #2C3038;font-weight: 400;">{{invoice.customerId.shippingAddress.state}},{{invoice.customerId.shippingAddress.country}}</h2>
+                  <h2 style="font-size:16px;display:block;margin:0 ; color: #2C3038;font-weight: 400;">{{invoice.customerId.billingAddress.addressLine1}},{{invoice.customerId.billingAddress.city}}</h2>
                   <h2 style="font-size:16px;display:block;margin:0 ; color: #2C3038;font-weight: 400;">{{invoice.customerId.email}}</h2>
                   <h2 style="font-size:16px;display:block;margin:0 ; color: #2C3038;font-weight: 400;">{{invoice.customerId.phone}}</h2>
+                  <h2 style="font-size:16px;display:block;margin:0 ; color: #2C3038;font-weight: 400;">Matricule fiscale: {{invoice.customerId.mat_fisc}}</h2>
+
                 </td>
               </tr>
             </table>
@@ -85,10 +79,10 @@
                 <td style="width:100%;text-align: right;font-size: 24px;color: #7638FF;padding: 0 0 10px;font-weight: 700;">{{invoice.companySettings.companyName}}</td>
               </tr>
               <tr>
-                <td style="width:100%;text-align: right;font-size: 14px;color: black;padding: 0 0 10px;font-weight: 400;"><b>Address: </b><span style="display: block;">{{invoice.companySettings.addressLine1}},{{invoice.companySettings.addressLine2}},{{invoice.companySettings.city}},{{invoice.companySettings.state}},{{invoice.companySettings.country}},{{invoice.companySettings.pincode}}</span></td>
+                <td style="width:100%;text-align: right;font-size: 14px;color: black;padding: 0 0 10px;font-weight: 400;"><b>Addresse: </b><span style="display: block;">{{invoice.companySettings.addressLine1}},{{invoice.companySettings.addressLine2}},{{invoice.companySettings.city}},{{invoice.companySettings.state}},{{invoice.companySettings.country}},{{invoice.companySettings.pincode}}</span></td>
               </tr>
               <tr>
-                <td style="width:100%;text-align: right;font-size: 14px;color: black;padding: 0 0 10px;font-weight: 400;"><b>Mobile: </b><span style="display: block;">{{invoice.companySettings.phone}}</span></td>
+                <td style="width:100%;text-align: right;font-size: 14px;color: black;padding: 0 0 10px;font-weight: 400;"><b>Matricule fiscale: </b><span style="display: block;">{{invoice.companySettings.mat_fisc}}</span></td>
               </tr>
             </table>
           </td>
@@ -184,7 +178,7 @@
           <td align="right" style="width: 50%;padding: 0 20px;">
             <table style="width:100%;border-collapse: collapse;text-align: right;">
              <tr>
-                <td style="color: #50525d;font-size: 15px;padding: 0 0 5px;"><b>For Dreamguys</b></td>
+                
              </tr>
              <tr>
                 <td style="color: #50525d;font-size: 15px;padding: 0 0 5px;">

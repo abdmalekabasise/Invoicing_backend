@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const authModel = require("../models/auth.model");
+const planModel = require("../models/plan.model");
 const response = require("../../../response");
 const bcrypt = require("bcryptjs");
 const crypto = require("../../../crypto");
@@ -31,6 +32,17 @@ exports.signup = async (req, res) => {
         role: "Super Admin",
         created_at: new Date().toISOString(),
       });
+      const newPlan = await planModel.create({
+        name: "free",
+        price_per_month: 0,
+        price_per_year_ttc: 0,
+        password: hashedPassword,
+        type: "",
+        subscription_expiry: new Date(
+          Date.now() + 14 * 24 * 60 * 60 * 1000
+        ).toISOString(),
+        userId: newUser._id,
+      });
       data = { message: "Registration successful.", auth: true };
       response.success_message(data, res);
     }
@@ -42,132 +54,142 @@ exports.signup = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
-    const user = await authModel.findOne({ email: req.body.email });
+    const { email, password, fcmToken } = req.body;
+
+    // Find user by email
+    const user = await authModel.findOne({ email });
     if (!user) {
-      data = { message: "Email is incorrect." };
-      response.validation_error_message(data, res);
-    } else if (user.status === "Inactive") {
-      data = { message: "User is inactive." };
-      response.validation_error_message(data, res);
-    } else {
-      const passwordIsValid = bcrypt.compareSync(
-        req.body.password,
-        user.password
+      return response.validation_error_message(
+        { message: "Email is incorrect." },
+        res
       );
-      if (!passwordIsValid) {
-        data = { message: "Password is incorrect." };
-        response.validation_error_message(data, res);
-      } else {
-        let permissionRec, currencySymbol, profileDetails, companyDetails;
-        const token = jwt.sign(
-          {
-            id: user._id,
-            role: user.role,
-            userId: user.role === "Super Admin" ? user._id : user.userId,
-            email: req.body.email,
-            password: req.body.password,
-          },
-          process.env.JWTSECRET,
-          {
-            expiresIn: "24h", // expires in 24 hours
-          }
+    }
+
+    if (user.status === "Inactive") {
+      return response.validation_error_message(
+        { message: "User is inactive." },
+        res
+      );
+    }
+
+    // Validate password
+    const passwordIsValid = bcrypt.compareSync(password, user.password);
+    if (!passwordIsValid) {
+      return response.validation_error_message(
+        { message: "Password is incorrect." },
+        res
+      );
+    }
+
+    // Check subscription plan
+    const plan = await planModel.findOne({
+      userId: user.role === "Super Admin" ? user._id : user.userId,
+    });
+    if (plan) {
+      const isExpired = new Date(plan.subscription_expiry) < new Date();
+      if (isExpired && user.role !== "Super Admin") {
+        return response.validation_error_message(
+          { message: "Erreur plan non payé." },
+          res
         );
-        if (req.body.fcmToken) {
-          await authModel.findByIdAndUpdate(
-            user._id,
-            {
-              $set: {
-                fcmToken: req.body.fcmToken,
-              },
-            },
-            { new: true }
-          );
-        }
-
-        permissionRec = { allModules: true };
-        if (user.role !== "Super Admin") {
-          permissionRec = await permissionModel
-            .findOne({
-              roleName: user.role,
-            })
-            .lean();
-        }
-        const preferenceRec = await preference_settingsModels
-          .findOne()
-          .populate("currencyId")
-          .lean();
-        if (preferenceRec && preferenceRec.currencyId) {
-          currencySymbol = preferenceRec.currencyId.currency_symbol;
-        } else {
-          currencySymbol = "";
-        }
-
-        profileDetails = await authModel
-          .findOne({ _id: user._id })
-          .select("firstName lastName gender image")
-          .lean();
-
-        if (profileDetails == null) {
-          profileDetails = {
-            firstName: "",
-            lastName: "",
-            gender: "",
-            image: "",
-          };
-        }
-        var filter = {};
-
-        filter.userId = user.role === "Super Admin" ? user.id : user.userId
-
-        companyDetails = await companySettingModel.findOne(filter).lean();
-
-        if (companyDetails == null) {
-          companyDetails = {
-            companyName: "",
-            email: "",
-            phone: "",
-            addressLine1: "",
-            addressLine2: "",
-            city: "",
-            state: "",
-            country: "",
-            pincode: "",
-            siteLogo: "",
-            favicon: "",
-            companyLogo: "",
-          };
-        }
-        data = {
-          profileDetails: profileDetails,
-          companyDetails: companyDetails,
-          currencySymbol: currencySymbol,
-          token: token,
-          permissionRes: permissionRec,
-        };
-        req.headers.token = token;
-        if (companyDetails.siteLogo !== "") {
-          companyDetails.siteLogo = `${process.env.DEVLOPMENT_BACKEND_URL}/${companyDetails.siteLogo}`;
-        }
-        if (companyDetails.favicon !== "") {
-          companyDetails.favicon = `${process.env.DEVLOPMENT_BACKEND_URL}/${companyDetails.favicon}`;
-        }
-        if (companyDetails.companyLogo !== "") {
-          companyDetails.companyLogo = `${process.env.DEVLOPMENT_BACKEND_URL}/${companyDetails.companyLogo}`;
-        }
-        if (profileDetails.image !== "") {
-          profileDetails.image = `${process.env.DEVLOPMENT_BACKEND_URL}/${profileDetails.image}`;
-        }
-
-        await notificationModel.deleteMany({
-          userId: user._id,
-        });
-        await notification.minStockAlert(req, res);
-        response.success_message(data, res);
       }
     }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      {
+        id: user._id,
+        role: user.role,
+        userId: user.role === "Super Admin" ? user._id : user.userId,
+        email,
+        password,
+      },
+      process.env.JWTSECRET,
+      { expiresIn: "24h" }
+    );
+
+    // Update FCM token if provided
+    if (fcmToken) {
+      await authModel.findByIdAndUpdate(
+        user._id,
+        { $set: { fcmToken } },
+        { new: true }
+      );
+    }
+
+    // Fetch permissions
+    let permissionRec = { allModules: true };
+    if (user.role !== "Super Admin") {
+      permissionRec = await permissionModel
+        .findOne({ roleName: user.role })
+        .lean();
+    }
+
+    // Fetch currency settings
+    const preferenceRec = await preference_settingsModels
+      .findOne()
+      .populate("currencyId")
+      .lean();
+    const currencySymbol = preferenceRec?.currencyId?.currency_symbol || "";
+
+    // Fetch user profile details
+    let profileDetails = await authModel
+      .findOne({ _id: user._id })
+      .select("firstName lastName gender image")
+      .lean();
+    profileDetails = profileDetails || {
+      firstName: "",
+      lastName: "",
+      gender: "",
+      image: "",
+    };
+
+    // Fetch company details
+    const filter = {
+      userId: user.role === "Super Admin" ? user.id : user.userId,
+    };
+    let companyDetails = await companySettingModel.findOne(filter).lean();
+    companyDetails = companyDetails || {
+      companyName: "",
+      email: "",
+      phone: "",
+      addressLine1: "",
+      addressLine2: "",
+      city: "",
+      state: "",
+      country: "",
+      pincode: "",
+      siteLogo: "",
+      favicon: "",
+      companyLogo: "",
+    };
+
+    // Format image URLs
+    const formatImageUrl = (image) =>
+      image ? `${process.env.DEVLOPMENT_BACKEND_URL}/${image}` : "";
+
+    companyDetails.siteLogo = formatImageUrl(companyDetails.siteLogo);
+    companyDetails.favicon = formatImageUrl(companyDetails.favicon);
+    companyDetails.companyLogo = formatImageUrl(companyDetails.companyLogo);
+    profileDetails.image = formatImageUrl(profileDetails.image);
+
+    // Clean notifications
+    await notificationModel.deleteMany({ userId: user._id });
+    await notification.minStockAlert(req, res);
+
+    // Response data
+    const data = {
+      profileDetails,
+      companyDetails,
+      currencySymbol,
+      token,
+      permissionRes: permissionRec,
+      plan: plan,
+    };
+
+    response.success_message(data, res);
   } catch (err) {
-    data = { message: err.message };
-    response.error_message(data, res);
+    response.error_message({ message: err.message }, res);
   }
 };
 
@@ -288,10 +310,8 @@ exports.forgot_password = async (req, res) => {
         } else {
           data = { message: "From email is empty!" };
           response.validation_error_message(data, res);
-
         }
         //emailSettings Null end
-
       } else {
         data = { message: "Invalid Email" };
         response.validation_error_message(data, res);

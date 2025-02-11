@@ -27,7 +27,7 @@ exports.create = async (req, res) => {
       filePath = req.file.path;
     }
     const purchaseRec = await purchaseModel.create({
-      purchaseId: `PUR-${count.toString().padStart(6, "0")}`,
+      purchaseId: `FF-${count.toString().padStart(5, "0")}`,
       vendorId: request.vendorId,
       purchaseDate: request.purchaseDate,
       // dueDate: request.dueDate,
@@ -51,7 +51,11 @@ exports.create = async (req, res) => {
       notes: request.notes,
       termsAndCondition: request.termsAndCondition,
       sign_type: request.sign_type,
-      signatureId: request.signatureId,
+      signatureId:
+        request.signatureId === "undefined" ||
+        request.signatureId === "[object Object]"
+          ? null
+          : request.signatureId,
       signatureName: request.signatureName,
       signatureImage: request.sign_type === "eSignature" ? filePath : null,
       userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
@@ -169,7 +173,10 @@ exports.update = async (req, res) => {
           termsAndCondition: request.termsAndCondition,
           sign_type: request.sign_type,
           signatureId:
-            request.sign_type !== "eSignature" ? request.signatureId : null,
+            request.signatureId === "undefined" ||
+            request.signatureId === "[object Object]"
+              ? null
+              : request.signatureId,
           signatureName:
             request.sign_type === "eSignature" ? request.signatureName : null,
           signatureImage: request.sign_type === "eSignature" ? filePath : null,
@@ -406,6 +413,23 @@ exports.delete = async (req, res) => {
     } else {
       throw new Error("Purchase record not found.");
     }
+  } catch (error) {
+    console.log("error:", error);
+    response.error_message(error.message, res);
+  }
+};
+exports.getPurchaseOrderNumber = async (req, res) => {
+  const authUser = verify.verify_token(req.headers.token).details;
+  try {
+    const purchaseOrderRecords = await purchaseModel
+      .find({
+        userId: authUser.role === "Super Admin" ? authUser.id : authUser.userId,
+      })
+      .count();
+    const purchaseOrderNumber = `FF-${(purchaseOrderRecords + 1)
+      .toString()
+      .padStart(5, 0)}`;
+    response.success_message(purchaseOrderNumber, res);
   } catch (error) {
     console.log("error:", error);
     response.error_message(error.message, res);

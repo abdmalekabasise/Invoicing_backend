@@ -96,6 +96,10 @@ let invoice = new Schema(
       type: Schema.Types.String,
       required: true,
     },
+    TotalAmountTnd: {
+      type: Schema.Types.String,
+      required: true,
+    },
     bank: {
       type: Schema.Types.ObjectId,
       required: false,

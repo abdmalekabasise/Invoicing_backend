@@ -110,17 +110,30 @@ router.post(
   productsController.delete
 );
 router.get("/generateSKU", productsController.generateSKU);
-router.get("/rapportProduct/:id", checkAccess.checkAccess("productsOrServices", "view"), productsController.calculateProductProfit);
+router.get(
+  "/rapportProduct/:id",
+  checkAccess.checkAccess("productsOrServices", "view"),
+  productsController.calculateProductProfit
+);
+router.get(
+  "/rapportCategory/:id",
+  checkAccess.checkAccess("productsOrServices", "view"),
+  productsController.reportCategory
+);
+
 router.post(
   "/deleteImage",
   checkAccess.checkAccess("productsOrServices", "delete"),
   productsController.deleteImage
 );
 
-router.post("/searchProduct", checkAccess.checkAccess("productsOrServices", "view"), productsController.SearchProduct);
+router.post(
+  "/searchProduct",
+  checkAccess.checkAccess("productsOrServices", "view"),
+  productsController.SearchProduct
+);
 
 router.get("/getProductCode/:type", productsController.getInvoiceNumber);
 router.get("/exp/exportProducts", productsController.exportProducts);
-
 
 module.exports = router;

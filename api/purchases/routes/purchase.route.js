@@ -106,5 +106,5 @@ router.post(
   deleteValidator._idValidator,
   purchaseController.delete
 );
-
+router.get("/getPurchaseNumber", purchaseController.getPurchaseOrderNumber);
 module.exports = router;

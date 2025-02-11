@@ -100,12 +100,12 @@ router.get(
   checkAccess.checkAccess("invoice", "view"),
   invoiceController.list
 );
-/*
+
 router.get(
   "/pdfCreate",
   checkAccess.checkAccess("invoice", "create"),
   invoiceController.sendPdf
-);*/
+);
 router.put(
   "/update_status/:id",
   checkAccess.checkAccess("invoice", "update"),

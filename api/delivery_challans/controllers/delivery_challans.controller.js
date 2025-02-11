@@ -19,9 +19,16 @@ exports.create = async (req, res) => {
     const dcrec = await deliverychallanModel.findOne({
       deliveryChallanNumber: request.deliveryChallanNumber,
       isDeleted: false,
+      userId:
+        auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
     });
 
-    const dcCount = await deliverychallanModel.find({}).count();
+    const dcCount = await deliverychallanModel
+      .find({
+        userId:
+          auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
+      })
+      .count();
     let filePath = "";
     if (req.file) {
       filePath = req.file.path;
@@ -51,7 +58,7 @@ exports.create = async (req, res) => {
           items: request.items,
           selectedOtherTaxes: request.selectedOtherTaxes,
           selectedTaxRates: request.selectedTaxRates,
-          currency:request.currency,
+          currency: request.currency,
           discountType: request.discountType,
           discount: request.discount,
           tax: request.tax,
@@ -64,7 +71,8 @@ exports.create = async (req, res) => {
           notes: request.notes,
           termsAndCondition: request.termsAndCondition,
           sign_type: request.sign_type,
-          signatureId: request.signatureId,
+          signatureId:
+            request.signatureId === "undefined" ? null : request.signatureId,
           signatureName: request.signatureName,
           signatureImage: request.sign_type === "eSignature" ? filePath : null,
           userId: auth_user.id,
@@ -88,12 +96,15 @@ exports.create = async (req, res) => {
 };
 
 exports.list = async (req, res) => {
+  const authUser = verify.verify_token(req.headers.token).details;
+
   try {
     const request = req.query;
     let filter = {
       isDeleted: false,
     };
-
+    filter.userId =
+      authUser.role === "Super Admin" ? authUser.id : authUser.userId;
     if (request.customer) {
       let splittedVal = request.customer.split(",").map((id) => {
         return mongoose.Types.ObjectId(id);
@@ -121,8 +132,9 @@ exports.list = async (req, res) => {
       ) {
         item.customerId.image = `${process.env.DEVLOPMENT_BACKEND_URL}/${item.customerId.image}`;
       }
-      if (item.signatureImage) {
-        item.signatureImage = `${process.env.DEVLOPMENT_BACKEND_URL}/${item.signatureImage}`;
+
+      if (item.signatureId && item.signatureId.signatureImage) {
+        item.signatureId.signatureImage = `${process.env.DEVLOPMENT_BACKEND_URL}/${item.signatureId.signatureImage}`;
       }
       if (item.signatureInfo && item.signatureInfo.signatureImage) {
         item.signatureInfo.signatureImage = `${process.env.DEVLOPMENT_BACKEND_URL}/${item.signatureInfo.signatureImage}`;
@@ -197,7 +209,7 @@ exports.update = async (req, res) => {
         deliveryChallanDate: request.deliveryChallanDate,
         dueDate: request.dueDate,
         referenceNo: request.referenceNo,
-        currency:request.currency,
+        currency: request.currency,
         deliveryAddress: {
           name: request.deliveryAddress?.name,
           addressLine1: request.deliveryAddress?.addressLine1,
@@ -221,7 +233,7 @@ exports.update = async (req, res) => {
         termsAndCondition: request.termsAndCondition,
         sign_type: request.sign_type,
         signatureId:
-          request.sign_type !== "eSignature" ? request.signatureId : null,
+          request.signatureId === "undefined" ? null : request.signatureId,
         signatureName:
           request.sign_type === "eSignature" ? request.signatureName : null,
         signatureImage: request.sign_type === "eSignature" ? filePath : null,
@@ -524,8 +536,14 @@ exports.cloneDeliveryChallans = async function (req, res) {
 };
 
 exports.getDeliveryChallanNumber = async (req, res) => {
+  const auth_user = verify.verify_token(req.headers.token).details;
   try {
-    const creditNoteRecords = await deliverychallanModel.find().count();
+    const creditNoteRecords = await deliverychallanModel
+      .find({
+        userId:
+          auth_user.role === "Super Admin" ? auth_user.id : auth_user.userId,
+      })
+      .count();
     const creditNoteNumber = `DC-${(creditNoteRecords + 1)
       .toString()
       .padStart(6, 0)}`;

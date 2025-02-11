@@ -28,9 +28,11 @@ const notificationModel = require("../../notification/models/notification.model"
 const unauthorizedAPI = require("../../unauthorized_apis/controllers/unauthorized_apis.controller");
 const DeliveryChallanModel = require("../../delivery_challans/models/delivery_challans.model");
 const delivery_challansModel = require("../../delivery_challans/models/delivery_challans.model");
-//const puppeteer = require("puppeteer");
+const puppeteer = require("puppeteer");
 //"puppeteer": "^21.3.8",
 const handlebars = require("handlebars");
+const axios = require("axios");
+
 const { join, resolve } = require("path");
 
 var data;
@@ -76,6 +78,28 @@ exports.create = async (req, res) => {
       if (request.payment_method == "Online") {
         status = "SENT";
       }
+      let totalTnd = 0;
+      console.log(request.signatureId);
+      if (request.currency === "TND") {
+        // If currency is TND, use the total amount directly
+        totalTnd = parseFloat(request.TotalAmount).toFixed(2); // Convert string to number
+      } else {
+        // If currency is not TND, fetch the exchange rate
+        try {
+          const apiResponse = await axios.get(
+            `https://api.exchangeratesapi.io/v1/latest?access_key=4233bd58c3b207056c466b8213b1864f&base=${request.currency}&symbols=TND`
+          );
+
+          // Extract the rate for TND from the API response
+          const rate = apiResponse.data.rates.TND;
+
+          // Convert TotalAmount from string to number and calculate the total amount in TND
+          totalTnd = (parseFloat(request.TotalAmount) * rate).toFixed(2);
+        } catch (error) {
+          console.error("Error fetching exchange rate:", error.message);
+          throw error; // Handle the error as needed
+        }
+      }
       const invoicerec = await invoiceModel.create(
         {
           customerId: request.customerId,
@@ -96,7 +120,8 @@ exports.create = async (req, res) => {
           taxable_amount: request.taxable_amount,
           sub_total: request.sub_total,
           sign_type: request.sign_type,
-          signatureId: request.signatureId,
+          signatureId:
+            request.signatureId === "undefined" ? null : request.signatureId,
           signatureName: request.signatureName,
           signatureImage: request.sign_type === "eSignature" ? filesName : null,
           // signatureImage: filesName ? filesName : undefined,
@@ -105,6 +130,8 @@ exports.create = async (req, res) => {
           vat: request.vat,
           roundOff: request.roundOff,
           TotalAmount: request.TotalAmount,
+          TotalAmountTnd: totalTnd.toString(), // Add TotalAmountTnd to the schema
+
           isRecurring: request.isRecurring,
           recurringCycle: request.recurringCycle ? request.recurringCycle : 0,
           total: request.total,
@@ -255,6 +282,8 @@ exports.list = async function (req, res) {
       { path: "customerId", select: " -updated_at" },
       { path: "signatureId" },
     ];
+    console.log("pl");
+
     options.sort = { _id: -1 };
     options.lean = true;
     var filter = {};
@@ -345,7 +374,7 @@ exports.list = async function (req, res) {
             parseFloat(item.TotalAmount) - paymentDetails[0].paidAmount;
           item.paidAmount = paymentDetails[0].paidAmount;
         } else {
-          item.balance = item.TotalAmount;
+          item.balance = parseFloat(item.TotalAmount);
           item.paidAmount = 0;
         }
         if (item.signatureImage) {
@@ -443,7 +472,7 @@ exports.cardCount = async function (req, res) {
       {
         $group: {
           _id: null,
-          total_sum: { $sum: { $toDouble: "$TotalAmount" } },
+          total_sum: { $sum: { $toDouble: "$TotalAmountTnd" } },
           count: { $sum: 1 },
         },
       },
@@ -473,7 +502,7 @@ exports.cardCount = async function (req, res) {
       {
         $group: {
           _id: null,
-          total_sum: { $sum: { $toDouble: "$TotalAmount" } },
+          total_sum: { $sum: { $toDouble: "$TotalAmountTnd" } },
           count: { $sum: 1 },
         },
       },
@@ -504,7 +533,7 @@ exports.cardCount = async function (req, res) {
       {
         $group: {
           _id: null,
-          total_sum: { $sum: { $toDouble: "$TotalAmount" } },
+          total_sum: { $sum: { $toDouble: "$TotalAmountTnd" } },
           count: { $sum: 1 },
         },
       },
@@ -533,7 +562,7 @@ exports.cardCount = async function (req, res) {
       {
         $group: {
           _id: null,
-          total_sum: { $sum: { $toDouble: "$TotalAmount" } },
+          total_sum: { $sum: { $toDouble: "$TotalAmountTnd" } },
         },
       },
     ]);
@@ -551,7 +580,7 @@ exports.cardCount = async function (req, res) {
       {
         $group: {
           _id: null,
-          total_sum: { $sum: { $toDouble: "$TotalAmount" } },
+          total_sum: { $sum: { $toDouble: "$TotalAmountTnd" } },
         },
       },
     ]);
@@ -681,7 +710,7 @@ exports.cardCount = async function (req, res) {
 // Card count function End
 
 //PDF generate function Start
-/*
+
 exports.sendPdf = async (req, res) => {
   try {
     var invoiceId = req.query.invoiceId;
@@ -733,9 +762,9 @@ exports.sendPdf = async (req, res) => {
         parseFloat(invoiceinfo.totalDiscount) +
         parseFloat(taxAmount))
     ).toFixed(2);
-    const baseDirectory = resolve(__dirname, '..', '..', '..'); // Adjust the number of '..' as needed
-    const invoicesPdfDirectory = 'uploads/invoicesPdf';
-    const fileName = 'invoice.pdf';
+    const baseDirectory = resolve(__dirname, "..", "..", ".."); // Adjust the number of '..' as needed
+    const invoicesPdfDirectory = "uploads/invoicesPdf";
+    const fileName = "invoice.pdf";
 
     // Using join to create complete paths
     const folderPath = join(baseDirectory, invoicesPdfDirectory);
@@ -752,16 +781,23 @@ exports.sendPdf = async (req, res) => {
     const template = handlebars.compile(htmlTemplate);
     const renderedHtml = template({ invoice: invoiceinfo });
     // const browser = await puppeteer.launch({ headless: true });
-    const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
+    const browser = await puppeteer.launch({ args: ["--no-sandbox"] });
     const page = await browser.newPage();
 
     await page.setContent(renderedHtml);
     await page.pdf({ path: fullPath, format: "A4" });
 
     await browser.close();
-    var subject = "Invoice PDF";
-    var emailBody = "";
-    emailBody += "<p><b>Your invoice attached below...</b></p>";
+    var subject = `Facture N° ${invoiceinfo.invoiceNumber}`;
+    let emailBody = `
+    <p>Merci pour votre confiance. Votre document peut être consulté, imprimé et téléchargé au format PDF à partir de la pièce jointe.</p>
+    <p><b>Référence :</b> ${invoiceinfo.invoiceNumber}</p>
+    <p><b>Date :</b> ${invoiceinfo.invoiceDate}</p>
+    <p><b>Total :</b> ${invoiceinfo.TotalAmount.toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).replace(/,/g, " ")}</p>
+  `;
     const emailSettings = await emailSettingModel.findOne().lean();
 
     let mailres;
@@ -805,13 +841,12 @@ exports.sendPdf = async (req, res) => {
     } else {
       data = { message: "From email is empty!" };
       response.validation_error_message(data, res);
-
     }
   } catch (error) {
     console.log("error :", error);
     response.error_message(error, res);
   }
-};*/
+};
 
 exports.view = async function (req, res) {
   const authUser = verify.verify_token(req.headers.token).details;
@@ -979,7 +1014,7 @@ exports.update = async (req, res) => {
           sub_total: request.sub_total,
           sign_type: request.sign_type,
           signatureId:
-            request.sign_type !== "eSignature" ? request.signatureId : null,
+            request.signatureId === "undefined" ? null : request.signatureId,
           signatureName:
             request.sign_type === "eSignature" ? request.signatureName : null,
           signatureImage: request.sign_type === "eSignature" ? filesName : null,
@@ -1454,7 +1489,7 @@ exports.getInvoiceNumber = async (req, res) => {
       .count();
     const invoiceNumber = `${invoicePrefix}${(invoiceRecords + 1)
       .toString()
-      .padStart(6, 0)}`;
+      .padStart(5, 0)}`;
     response.success_message(invoiceNumber, res);
   } catch (error) {
     console.log("error :", error);
