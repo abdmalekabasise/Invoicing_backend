@@ -253,7 +253,7 @@ exports.createCheckout = async (req, res) => {
     addPaymentFeesToAmount: true,
     email: email,
     orderId: plan,
-    webhook: "https://merchant.tech/api/notification_payment",
+    webhook: `${process.env.DEVLOPMENT_BACKEND_URL}/payment/verifyPay`,
     silentWebhook: true,
     successUrl: process.env.DEVLOPMENT_FRONTEND_URL,
     failUrl: process.env.DEVLOPMENT_FRONTEND_URL,
