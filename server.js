@@ -44,8 +44,8 @@ if (process.env.NODE_ENV == "aa") {
       .listen(port, "0.0.0.0", function () {
         console.log(
           "Production Server is up and running on port number " +
-            port +
-            " Https"
+          port +
+          " Https"
         );
       });
   } catch (err) {
@@ -55,8 +55,8 @@ if (process.env.NODE_ENV == "aa") {
   http.createServer(app).listen(port, function () {
     console.log(
       "Development Server is up and running on port number " +
-        port +
-        " with Http"
+      port +
+      " with Http"
     );
   });
 }
@@ -225,7 +225,7 @@ const purchase = require("./api/purchases/routes/purchase.route");
 app.use("/purchases", jwtmiddleware.jwtauth, purchase);
 
 const payment = require("./api/payment/routes/payment.route");
-app.use("/payment", jwtmiddleware.jwtauth, payment);
+app.use("/payment", payment);
 
 const quotation = require("./api/quotation/routes/quotation.route");
 app.use("/quotation", jwtmiddleware.jwtauth, quotation);

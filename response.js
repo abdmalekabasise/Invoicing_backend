@@ -2,7 +2,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 var router = express.Router();
 
-var program = "Kanakku";
+var program = "SoftFacture";
 var version = "1.0.0";
 var release = "01";
 var date = new Date();

@@ -3,8 +3,11 @@ const router = express.Router();
 
 const paymentController = require("../controllers/payment.controller");
 const checkAccess = require("../../../middleware/permission.middleware");
+const jwtmiddleware = require("../../../middleware/jwt.mimiddleware");
 const paymentValidator = require("../validations/payment.validator");
 
+router.post('/goCheckout', jwtmiddleware.jwtauth, paymentController.createCheckout);
+router.get('/verifyPay', paymentController.webhook);
 router.post(
   "/addPayment",
   checkAccess.checkAccess("payment", "create"),

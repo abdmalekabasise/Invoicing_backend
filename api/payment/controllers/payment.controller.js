@@ -5,6 +5,10 @@ const response = require("../../../response");
 const verify = require("../../../verify.token");
 const mongoose = require("mongoose");
 const resUpdate = require("../../common/date");
+const authModel = require("../../auth/models/auth.model");
+const planModel = require("../../auth/models/plan.model");
+const { default: axios } = require("axios");
+const moment = require('moment');
 
 exports.create = async (req, res) => {
   try {
@@ -209,3 +213,95 @@ exports.softDelete = async (req, res) => {
     response.validation_error_message(data, res);
   }
 };
+exports.createCheckout = async (req, res) => {
+  let email;
+  const auth_user = verify.verify_token(req.headers.token).details;
+
+  if (auth_user.role === "Super Admin") {
+    email = auth_user.email;
+    console.log("email::", email);
+  } else {
+    return res.status(403).send("Error");
+  }
+  const type = req.body.type;
+  let amount;
+  let plan;
+  if (type !== "Month" && type !== "Year") {
+    return res.status(401).send("Error");
+  }
+  if (type === "Month") {
+    amount = 19900;
+    plan = "Month_Pn"
+  }
+  if (type === "Year") {
+    amount = 199000;
+    plan = "Year_Pn"
+  }
+  const headers = {
+    'Content-Type': 'application/json',
+    'x-api-key': `${process.env.KONNECT_API}` // Replace with your token
+  };
+  const body = {
+    receiverWalletId: "67aa958591191821405fef00",
+    token: "TND",
+    amount: amount,
+    type: "immediate",
+    description: "SoftFacture",
+    acceptedPaymentMethods: ["wallet", "bank_card", "e-DINAR"],
+    lifespan: 15,
+    checkoutForm: false,
+    addPaymentFeesToAmount: true,
+    email: email,
+    orderId: plan,
+    webhook: "https://merchant.tech/api/notification_payment",
+    silentWebhook: true,
+    successUrl: process.env.DEVLOPMENT_FRONTEND_URL,
+    failUrl: process.env.DEVLOPMENT_FRONTEND_URL,
+    theme: "light"
+  }
+  try {
+    const KonnectResponse = await axios.post(`${process.env.KONNECT_URL}/payments/init-payment`, body, { headers });
+    console.log(KonnectResponse);
+    return response.success_message(KonnectResponse.data.payUrl, res);
+  } catch (error) {
+    console.log("***********************");
+    console.log("error:::", error);
+    return res.status(401).send(error.response ? error.response.data : error.message);
+  }
+
+}
+
+exports.webhook = async (req, res) => {
+  const paymentRef = req.query.payment_ref;
+  try {
+    const konnectApi = await axios.get(`${process.env.KONNECT_URL}/payments/${paymentRef}`);
+    if (konnectApi.data.payment && konnectApi.data.payment.status === "completed") {
+      const user = await authModel.findOne({ email: konnectApi.data.payment.paymentDetails.email });
+      const plan = await planModel.findOne({ userId: user._id });
+      if (konnectApi.data.payment.orderId === "Month_Pn") {
+        plan.subscription_expiry = moment().add(1, 'months').toDate();
+        plan.name = "Month plan";
+        plan.type = "Month";
+        price_per_month = konnectApi.data.payment.amount;
+
+        await plan.save();
+
+      }
+      if (konnectApi.data.payment.orderId === "Year_Pn") {
+        plan.subscription_expiry = moment().add(1, 'years').toDate();
+        plan.name = "Year plan";
+        plan.type = "Year";
+        price_per_month = konnectApi.data.payment.amount;
+        await plan.save();
+      }
+      return res.json(true);
+
+    }
+    return res.json(false);
+  } catch (err) {
+    console.log(err);
+  }
+
+
+
+}
