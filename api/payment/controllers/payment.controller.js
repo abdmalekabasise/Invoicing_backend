@@ -279,7 +279,9 @@ exports.webhook = async (req, res) => {
       const user = await authModel.findOne({ email: konnectApi.data.payment.paymentDetails.email });
       const plan = await planModel.findOne({ userId: user._id });
       if (konnectApi.data.payment.orderId === "Month_Pn") {
-        plan.subscription_expiry = moment().add(1, 'months').toDate();
+        plan.subscription_expiry = moment(konnectApi.data.payment.createdAt).add(1, 'months').toDate();
+        console.log("kkkl", konnectApi.data.payment.createdAt)
+        console.log(moment(konnectApi.data.payment.createdAt).toISOString());
         plan.name = "Month plan";
         plan.type = "Month";
         price_per_month = konnectApi.data.payment.amount;
@@ -288,7 +290,7 @@ exports.webhook = async (req, res) => {
 
       }
       if (konnectApi.data.payment.orderId === "Year_Pn") {
-        plan.subscription_expiry = moment().add(1, 'years').toDate();
+        plan.subscription_expiry = moment(konnectApi.data.payment.createdAt).add(1, 'years').toDate();
         plan.name = "Year plan";
         plan.type = "Year";
         price_per_month = konnectApi.data.payment.amount;
